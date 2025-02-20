@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
   collection,
   getDocs,
@@ -7,7 +7,10 @@ import {
   query,
   where,
   serverTimestamp,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import {
   TextField,
   MenuItem,
@@ -24,51 +27,56 @@ const StudentCheckIn = () => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [destination, setDestination] = useState('');
+  const [escortRequired, setEscortRequired] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState('error'); // "error" or "success"
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchStudents();
+    setCurrentUser(auth.currentUser); // Get logged-in user
   }, []);
 
   const fetchStudents = async () => {
     const querySnapshot = await getDocs(collection(db, 'students'));
     setStudents(
-      querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+      querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
     );
   };
 
-  const getCheckInCountToday = async (studentId) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-
-    const checkOutQuery = query(
-      collection(db, 'exit_records'),
-      where('student_id', '==', studentId),
-      where('exit_time', '>=', today)
-    );
-
-    const checkOutSnapshot = await getDocs(checkOutQuery);
-    return checkOutSnapshot.size;
+  const getStudentDetails = async (studentId) => {
+    if (!studentId) return null;
+    const studentDoc = await getDoc(doc(db, 'students', studentId));
+    return studentDoc.exists() ? studentDoc.data() : null;
   };
 
-  const isRestrictedTime = () => {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const totalMinutes = hours * 60 + minutes;
+  const handlePasswordConfirm = async () => {
+    if (!currentUser || !password) {
+      showAlert(
+        '⚠️ Please enter your password to release the student.',
+        'error'
+      );
+      return;
+    }
 
-    const restrictedTimes = [
-      { start: 9 * 60, end: 9 * 60 + 10 }, // Period 1 First 10 Minutes
-      { start: 10 * 60 + 50, end: 11 * 60 }, // Period 1 Last 10 Minutes
-      { start: 11 * 60, end: 11 * 60 + 10 }, // Period 2 First 10 Minutes
-      { start: 12 * 60 + 50, end: 13 * 60 }, // Period 2 Last 10 Minutes
-    ];
-
-    return restrictedTimes.some(
-      ({ start, end }) => totalMinutes >= start && totalMinutes < end
-    );
+    try {
+      await signInWithEmailAndPassword(
+        auth,
+        currentUser.email,
+        password
+      );
+      setPasswordModalOpen(false);
+      setPassword('');
+      proceedWithCheckOut();
+    } catch (error) {
+      showAlert('🚨 Incorrect password. Access denied.', 'error');
+    }
   };
 
   const handleCheckOut = async () => {
@@ -80,23 +88,16 @@ const StudentCheckIn = () => {
       return;
     }
 
-    if (isRestrictedTime()) {
-      showAlert(
-        '🚨 You cannot check out during the first or last 10 minutes of class.',
-        'error'
-      );
+    const studentDetails = await getStudentDetails(selectedStudent);
+    if (studentDetails?.escort_required) {
+      setPasswordModalOpen(true); // Open full-screen password confirmation modal
       return;
     }
 
-    const checkInCount = await getCheckInCountToday(selectedStudent);
-    if (checkInCount >= 3) {
-      showAlert(
-        '🚨 STUDENT LIMIT REACHED 🚨\n\nThis student has already checked out 3 times today. No further checkouts allowed.',
-        'error'
-      );
-      return;
-    }
+    proceedWithCheckOut();
+  };
 
+  const proceedWithCheckOut = async () => {
     await addDoc(collection(db, 'exit_records'), {
       student_id: selectedStudent,
       destination,
@@ -128,7 +129,12 @@ const StudentCheckIn = () => {
         label="Select Student"
         fullWidth
         value={selectedStudent}
-        onChange={(e) => setSelectedStudent(e.target.value)}
+        onChange={async (e) => {
+          const studentId = e.target.value;
+          setSelectedStudent(studentId);
+          const studentDetails = await getStudentDetails(studentId);
+          setEscortRequired(studentDetails?.escort_required || false);
+        }}
         margin="normal"
       >
         {students.map((student) => (
@@ -164,12 +170,72 @@ const StudentCheckIn = () => {
         Check Out
       </Button>
 
-      {/* Full-Screen Alert Dialog with Dynamic Background */}
+      {/* Full-Screen Password Confirmation Modal */}
+      <Dialog open={passwordModalOpen} fullScreen>
+        <DialogContent
+          sx={{
+            backgroundColor: '#1e3a5f',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
+            🔒 Escort Required: Enter Password
+          </Typography>
+          <TextField
+            type="password"
+            label="Enter Password"
+            variant="outlined"
+            fullWidth
+            sx={{
+              maxWidth: 300,
+              mb: 4,
+              backgroundColor: '#ffffff',
+              borderRadius: '5px',
+            }}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <DialogActions sx={{ flexDirection: 'column', gap: 2 }}>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: '#2e7d32',
+                color: '#ffffff',
+                fontSize: 18,
+                width: '200px',
+              }}
+              onClick={handlePasswordConfirm}
+            >
+              Confirm
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: '#d32f2f',
+                color: '#ffffff',
+                fontSize: 18,
+                width: '200px',
+              }}
+              onClick={() => setPasswordModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-Screen Alert Dialog */}
       <Dialog open={alertOpen} fullScreen>
         <DialogContent
           sx={{
             backgroundColor:
-              alertType === 'error' ? '#d32f2f' : '#2e7d32', // Red for errors, Green for success
+              alertType === 'error' ? '#d32f2f' : '#2e7d32',
             color: '#ffffff',
             display: 'flex',
             flexDirection: 'column',
