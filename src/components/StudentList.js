@@ -15,6 +15,7 @@ import {
   Button,
   Box,
   Container,
+  Chip,
 } from '@mui/material';
 
 const StudentList = () => {
@@ -77,6 +78,16 @@ const StudentList = () => {
     };
   }, []);
 
+  // Define color mapping for destinations
+  const destinationColors = {
+    Restroom: '#2196F3', // Blue
+    'Counseling Office': '#9C27B0', // Purple
+    Nurse: '#E91E63', // Pink
+    Office: '#FF9800', // Orange
+    Library: '#4CAF50', // Green
+    Cafeteria: '#FFC107', // Yellow
+  };
+
   const calculateDuration = (exitTime) => {
     if (!exitTime) return { time: 'Just left', alert: false };
     const exitDate = exitTime.toDate();
@@ -132,10 +143,17 @@ const StudentList = () => {
                     >
                       {record.studentName}
                     </Typography>
-                    <Typography variant="body1">
-                      <strong>Destination:</strong>{' '}
-                      {record.destination}
-                    </Typography>
+                    <Chip
+                      label={record.destination}
+                      sx={{
+                        backgroundColor:
+                          destinationColors[record.destination] ||
+                          '#607D8B',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        my: 1,
+                      }}
+                    />
                     <Typography
                       variant="body2"
                       color="text.secondary"
@@ -160,7 +178,7 @@ const StudentList = () => {
                     </Typography>
                     <Button
                       variant="contained"
-                      color="primary"
+                      color="success"
                       onClick={() => handleReturn(record.id)}
                       sx={{ mt: 2 }}
                     >
