@@ -1,28 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Link,
 } from 'react-router-dom';
-import Auth from './components/Auth';
-import StudentCheckIn from './components/StudentCheckIn';
-import StudentList from './components/StudentList';
-import Dashboard from './components/Dashboard';
-import AddStudentPage from './pages/AddStudentPage';
 import {
   AppBar,
   Toolbar,
   Typography,
   Button,
-  Container,
-  CssBaseline,
   Box,
 } from '@mui/material';
-import logo from './assets/hall-waze-logo.png';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import StudentCheckIn from './components/StudentCheckIn';
+import StudentList from './components/StudentList';
+import EditStudent from './components/EditStudent';
+import AddStudent from './components/AddStudent';
+import Auth from './components/Auth';
+import Dashboard from './components/Dashboard'; // Placeholder for dashboard page
 
 function App() {
   const [user, setUser] = useState(null);
@@ -50,7 +48,7 @@ function App() {
   }, []);
 
   const handleSignOut = async () => {
-    await auth.signOut();
+    await signOut(auth);
     setUser(null);
     setRole('');
   };
@@ -58,110 +56,157 @@ function App() {
   return (
     <Router>
       <Box sx={{ flexGrow: 1 }}>
-        {/* ✅ Updated Navigation Bar Layout */}
+        {/* Navigation Bar */}
         <AppBar position="static" sx={{ backgroundColor: '#1e3a5f' }}>
-          {' '}
-          {/* Dark Navy Blue */}
-          <Toolbar>
-            {/* Logo */}
-            <Box
-              component="img"
-              src={logo}
-              alt="Hall-Waze Logo"
-              sx={{
-                height: 50,
-                width: 50,
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #f8e9d2',
-                mr: 2,
-              }}
-            />
-
-            {/* App Name */}
-            <Typography
-              variant="h6"
-              sx={{ color: '#f8e9d2', fontWeight: 'bold', mr: 4 }}
-            >
-              HALL-WAZE
-            </Typography>
-
-            {/* Show "Home" button only for admins */}
-            {user && role === 'admin' && (
-              <Button
-                color="inherit"
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            {/* Left-Aligned Links */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Typography
+                variant="h6"
                 component={Link}
                 to="/"
-                sx={{ mr: 2 }}
+                sx={{
+                  textDecoration: 'none',
+                  color: '#f8e9d2',
+                  fontWeight: 'bold',
+                }}
               >
+                Hall-Waze
+              </Typography>
+
+              <Button color="inherit" component={Link} to="/">
                 Home
               </Button>
-            )}
 
-            {/* Show "Dashboard" button only for admins */}
-            {user && role === 'admin' && (
               <Button
                 color="inherit"
                 component={Link}
-                to="/dashboard"
-                sx={{ mr: 2 }}
+                to="/student-list"
               >
-                Dashboard
+                Student List
               </Button>
-            )}
 
-            {/* Show "Add Student" button only for admins */}
-            {user && role === 'admin' && (
-              <Button
-                color="inherit"
-                component={Link}
-                to="/add-student"
-                sx={{ mr: 2 }}
-              >
-                Add Student
-              </Button>
-            )}
+              {user && role === 'admin' && (
+                <>
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/add-student"
+                  >
+                    Add Student
+                  </Button>
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/edit-student"
+                  >
+                    Edit Student
+                  </Button>
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/dashboard"
+                  >
+                    Dashboard
+                  </Button>
+                </>
+              )}
+            </Box>
 
-            {/* Pushes elements to the right */}
-            <Box sx={{ flexGrow: 1 }} />
-
-            {/* Right-Aligned User Email & Sign Out Button */}
-            {user && (
-              <>
-                <Typography
-                  variant="body1"
-                  sx={{ mr: 2, color: '#f8e9d2' }}
-                >
-                  {user.email}
-                </Typography>
-                <Button color="inherit" onClick={handleSignOut}>
-                  Sign Out
+            {/* Right-Aligned User Info & Sign Out */}
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+            >
+              {user ? (
+                <>
+                  <Typography
+                    variant="body1"
+                    sx={{ color: '#f8e9d2' }}
+                  >
+                    {user.email}
+                  </Typography>
+                  <Button color="inherit" onClick={handleSignOut}>
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button color="inherit" component={Link} to="/auth">
+                  Sign In
                 </Button>
-              </>
-            )}
+              )}
+            </Box>
           </Toolbar>
         </AppBar>
 
-        <Container>
-          <CssBaseline />
-          <Routes>
-            <Route
-              path="/"
-              element={
-                !user ? (
-                  <Auth />
-                ) : (
-                  <>
-                    <StudentCheckIn />
-                    <StudentList />
-                  </>
-                )
-              }
-            />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/add-student" element={<AddStudentPage />} />
-          </Routes>
-        </Container>
+        {/* Page Routes */}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              user ? (
+                <>
+                  <StudentCheckIn />
+                  <StudentList />
+                </>
+              ) : (
+                <Auth />
+              )
+            }
+          />
+          <Route path="/student-list" element={<StudentList />} />
+          <Route
+            path="/add-student"
+            element={
+              role === 'admin' ? (
+                <AddStudent />
+              ) : (
+                <Typography
+                  variant="h5"
+                  color="error"
+                  textAlign="center"
+                  mt={4}
+                >
+                  ❌ Access Denied
+                </Typography>
+              )
+            }
+          />
+          <Route
+            path="/edit-student"
+            element={
+              role === 'admin' ? (
+                <EditStudent />
+              ) : (
+                <Typography
+                  variant="h5"
+                  color="error"
+                  textAlign="center"
+                  mt={4}
+                >
+                  ❌ Access Denied
+                </Typography>
+              )
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              role === 'admin' ? (
+                <Dashboard />
+              ) : (
+                <Typography
+                  variant="h5"
+                  color="error"
+                  textAlign="center"
+                  mt={4}
+                >
+                  ❌ Access Denied
+                </Typography>
+              )
+            }
+          />
+          <Route path="/auth" element={<Auth />} />
+        </Routes>
       </Box>
     </Router>
   );
