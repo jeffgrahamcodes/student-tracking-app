@@ -16,7 +16,7 @@ import {
   CssBaseline,
   Box,
 } from '@mui/material';
-import logo from './assets/hall-waze.png';
+import logo from './assets/hall-waze-logo.png';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -52,7 +52,7 @@ function App() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      {/* ✅ Updated Navigation Bar with Logo & Colors */}
+      {/* ✅ Updated Navigation Bar Layout */}
       <AppBar position="static" sx={{ backgroundColor: '#1e3a5f' }}>
         {' '}
         {/* Dark Navy Blue */}
@@ -63,35 +63,43 @@ function App() {
             src={logo}
             alt="Hall-Waze Logo"
             sx={{
-              height: 50, // Adjust size as needed
-              width: 50, // Ensure it's a perfect circle
-              borderRadius: '50%', // Makes it circular
-              objectFit: 'cover', // Ensures proper scaling inside the circle
-              border: '2px solid #f8e9d2', // Optional border for visibility
-              mr: 2, // Adds right margin
+              height: 50,
+              width: 50,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '2px solid #f8e9d2',
+              mr: 2,
             }}
           />
 
           {/* App Name */}
           <Typography
             variant="h6"
-            sx={{ flexGrow: 1, color: '#f8e9d2', fontWeight: 'bold' }}
+            sx={{ color: '#f8e9d2', fontWeight: 'bold', mr: 4 }}
           >
             HALL-WAZE
           </Typography>
 
-          {/* Navigation Buttons */}
+          {/* Show "Dashboard" button only if user is an admin */}
+          {user && role === 'admin' && (
+            <Button
+              color="inherit"
+              onClick={() => setShowDashboard(!showDashboard)}
+              sx={{ mr: 2 }}
+            >
+              {showDashboard ? 'Home' : 'Dashboard'}
+            </Button>
+          )}
+
+          {/* Pushes elements to the right */}
+          <Box sx={{ flexGrow: 1 }} />
+
+          {/* Right-Aligned User Email & Sign Out Button */}
           {user && (
             <>
-              <Button
-                color="inherit"
-                onClick={() => setShowDashboard(!showDashboard)}
-              >
-                {showDashboard ? 'Home' : 'Dashboard'}
-              </Button>
               <Typography
                 variant="body1"
-                sx={{ marginRight: 2, color: '#f8e9d2' }}
+                sx={{ mr: 2, color: '#f8e9d2' }}
               >
                 {user.email}
               </Typography>
