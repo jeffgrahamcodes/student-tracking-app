@@ -6,6 +6,7 @@ import Auth from './components/Auth';
 import StudentCheckIn from './components/StudentCheckIn';
 import StudentList from './components/StudentList';
 import AddStudent from './components/AddStudent';
+import Dashboard from './components/Dashboard';
 import {
   AppBar,
   Toolbar,
@@ -19,6 +20,7 @@ import {
 function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('');
+  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -52,14 +54,17 @@ function App() {
       {/* ✅ Navigation Bar */}
       <AppBar position="static">
         <Toolbar>
-          {/* Left: App Name */}
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             HALL-WAZE
           </Typography>
-
-          {/* Right: Display User Email & Sign Out Button if Logged In */}
           {user && (
             <>
+              <Button
+                color="inherit"
+                onClick={() => setShowDashboard(!showDashboard)}
+              >
+                {showDashboard ? 'Home' : 'Dashboard'}
+              </Button>
               <Typography variant="body1" sx={{ marginRight: 2 }}>
                 {user.email}
               </Typography>
@@ -77,9 +82,15 @@ function App() {
           <Auth />
         ) : (
           <>
-            {role === 'admin' && <AddStudent />}
-            <StudentCheckIn />
-            <StudentList />
+            {showDashboard ? (
+              <Dashboard />
+            ) : (
+              <>
+                {role === 'admin' && <AddStudent />}
+                <StudentCheckIn />
+                <StudentList />
+              </>
+            )}
           </>
         )}
       </Container>
