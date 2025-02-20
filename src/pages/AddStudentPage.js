@@ -9,10 +9,12 @@ import {
   Box,
   Container,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-const AddStudent = () => {
+const AddStudentPage = () => {
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +31,7 @@ const AddStudent = () => {
       alert('Student added successfully!');
       setName('');
       setStudentId('');
+      navigate('/'); // Redirect back to home after adding
     } catch (error) {
       console.error('Error adding student:', error);
     }
@@ -78,4 +81,4 @@ const AddStudent = () => {
   );
 };
 
-export default AddStudent;
+export default AddStudentPage;
