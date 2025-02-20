@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Link,
+  Navigate,
 } from 'react-router-dom';
 import {
   AppBar,
@@ -11,6 +12,7 @@ import {
   Typography,
   Button,
   Box,
+  Container,
 } from '@mui/material';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -20,17 +22,20 @@ import StudentList from './components/StudentList';
 import EditStudent from './components/EditStudent';
 import AddStudent from './components/AddStudent';
 import Auth from './components/Auth';
-import Dashboard from './components/Dashboard'; // Placeholder for dashboard page
+import Dashboard from './components/Dashboard';
+import logo from './assets/hall-waze-logo.png'; // Ensure the logo is in the assets folder
 
 function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
       async (currentUser) => {
         setUser(currentUser);
+        setAuthChecked(true);
 
         if (currentUser) {
           const userRef = doc(db, 'user_roles', currentUser.uid);
@@ -53,14 +58,29 @@ function App() {
     setRole('');
   };
 
+  if (!authChecked) {
+    return (
+      <Typography variant="h5" sx={{ textAlign: 'center', mt: 5 }}>
+        Loading...
+      </Typography>
+    );
+  }
+
   return (
     <Router>
       <Box sx={{ flexGrow: 1 }}>
-        {/* Navigation Bar */}
+        {/* Always show the navbar */}
         <AppBar position="static" sx={{ backgroundColor: '#1e3a5f' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
             {/* Left-Aligned Links */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box
+              sx={{ display: 'flex', gap: 2, alignItems: 'center' }}
+            >
+              <img
+                src={logo}
+                alt="Hall-Waze Logo"
+                style={{ height: 40, width: 40, borderRadius: '50%' }} // Circular logo in navbar
+              />
               <Typography
                 variant="h6"
                 component={Link}
@@ -74,142 +94,143 @@ function App() {
                 Hall-Waze
               </Typography>
 
-              <Button color="inherit" component={Link} to="/">
-                Home
-              </Button>
-
-              <Button
-                color="inherit"
-                component={Link}
-                to="/student-list"
-              >
-                Student List
-              </Button>
-
-              {user && role === 'admin' && (
+              {user && (
                 <>
-                  <Button
-                    color="inherit"
-                    component={Link}
-                    to="/add-student"
-                  >
-                    Add Student
+                  <Button color="inherit" component={Link} to="/">
+                    Home
                   </Button>
                   <Button
                     color="inherit"
                     component={Link}
-                    to="/edit-student"
+                    to="/student-list"
                   >
-                    Edit Student
+                    Student List
                   </Button>
-                  <Button
-                    color="inherit"
-                    component={Link}
-                    to="/dashboard"
-                  >
-                    Dashboard
-                  </Button>
+
+                  {role === 'admin' && (
+                    <>
+                      <Button
+                        color="inherit"
+                        component={Link}
+                        to="/add-student"
+                      >
+                        Add Student
+                      </Button>
+                      <Button
+                        color="inherit"
+                        component={Link}
+                        to="/edit-student"
+                      >
+                        Edit Student
+                      </Button>
+                      <Button
+                        color="inherit"
+                        component={Link}
+                        to="/dashboard"
+                      >
+                        Dashboard
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </Box>
 
             {/* Right-Aligned User Info & Sign Out */}
-            <Box
-              sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
-            >
-              {user ? (
-                <>
-                  <Typography
-                    variant="body1"
-                    sx={{ color: '#f8e9d2' }}
-                  >
-                    {user.email}
-                  </Typography>
-                  <Button color="inherit" onClick={handleSignOut}>
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <Button color="inherit" component={Link} to="/auth">
-                  Sign In
+            {user && (
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+              >
+                <Typography variant="body1" sx={{ color: '#f8e9d2' }}>
+                  {user.email}
+                </Typography>
+                <Button color="inherit" onClick={handleSignOut}>
+                  Sign Out
                 </Button>
-              )}
-            </Box>
+              </Box>
+            )}
           </Toolbar>
         </AppBar>
 
-        {/* Page Routes */}
+        {/* Routes */}
         <Routes>
-          <Route
-            path="/"
-            element={
-              user ? (
-                <>
-                  <StudentCheckIn />
-                  <StudentList />
-                </>
-              ) : (
-                <Auth />
-              )
-            }
-          />
-          <Route path="/student-list" element={<StudentList />} />
-          <Route
-            path="/add-student"
-            element={
-              role === 'admin' ? (
-                <AddStudent />
-              ) : (
-                <Typography
-                  variant="h5"
-                  color="error"
-                  textAlign="center"
-                  mt={4}
-                >
-                  ❌ Access Denied
-                </Typography>
-              )
-            }
-          />
-          <Route
-            path="/edit-student"
-            element={
-              role === 'admin' ? (
-                <EditStudent />
-              ) : (
-                <Typography
-                  variant="h5"
-                  color="error"
-                  textAlign="center"
-                  mt={4}
-                >
-                  ❌ Access Denied
-                </Typography>
-              )
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              role === 'admin' ? (
-                <Dashboard />
-              ) : (
-                <Typography
-                  variant="h5"
-                  color="error"
-                  textAlign="center"
-                  mt={4}
-                >
-                  ❌ Access Denied
-                </Typography>
-              )
-            }
-          />
-          <Route path="/auth" element={<Auth />} />
+          {user ? (
+            <>
+              <Route
+                path="/"
+                element={
+                  <>
+                    <StudentCheckIn />
+                    <StudentList />
+                  </>
+                }
+              />
+              <Route path="/student-list" element={<StudentList />} />
+              <Route
+                path="/add-student"
+                element={
+                  role === 'admin' ? (
+                    <AddStudent />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
+              />
+              <Route
+                path="/edit-student"
+                element={
+                  role === 'admin' ? (
+                    <EditStudent />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  role === 'admin' ? (
+                    <Dashboard />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
+              />
+            </>
+          ) : (
+            <Route path="*" element={<AuthPage />} />
+          )}
         </Routes>
       </Box>
     </Router>
   );
 }
+
+// Custom Auth Page with Enlarged Circular Logo
+const AuthPage = () => {
+  return (
+    <Container
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '80vh',
+      }}
+    >
+      <img
+        src={logo}
+        alt="Hall-Waze Logo"
+        style={{
+          height: 300,
+          width: 300,
+          borderRadius: '50%',
+          marginBottom: 20,
+        }} // Larger circular logo
+      />
+      <Auth />
+    </Container>
+  );
+};
 
 export default App;
