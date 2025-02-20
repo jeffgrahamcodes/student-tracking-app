@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
   collection,
-  getDocs,
+  onSnapshot,
   doc,
   updateDoc,
-  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import {
@@ -21,42 +20,62 @@ const StudentList = () => {
   const [exitRecords, setExitRecords] = useState([]);
 
   useEffect(() => {
-    fetchExitRecords();
-  }, []);
-
-  const fetchExitRecords = async () => {
-    try {
-      // Fetch check-out records where return_time is NOT set
-      const exitSnapshot = await getDocs(
-        collection(db, 'exit_records')
-      );
-      const exitData = exitSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      // Fetch student names
-      const studentSnapshot = await getDocs(
-        collection(db, 'students')
-      );
-      const studentData = studentSnapshot.docs.reduce((acc, doc) => {
-        acc[doc.id] = doc.data().name;
-        return acc;
-      }, {});
-
-      // Map student names to exit records
-      const updatedExitRecords = exitData
-        .filter((record) => !record.return_time) // Only show students who haven't returned
-        .map((record) => ({
-          ...record,
-          studentName:
-            studentData[record.student_id] || 'Unknown Student',
+    // Firestore real-time listener
+    const unsubscribe = onSnapshot(
+      collection(db, 'exit_records'),
+      (snapshot) => {
+        const exitData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          duration: calculateDuration(doc.data().exit_time), // Initialize duration
         }));
 
-      setExitRecords(updatedExitRecords);
-    } catch (error) {
-      console.error('Error fetching exit records:', error);
-    }
+        // Fetch student names and map to exit records
+        const fetchStudents = async () => {
+          const studentSnapshot = await onSnapshot(
+            collection(db, 'students'),
+            (studentSnap) => {
+              const studentData = studentSnap.docs.reduce(
+                (acc, doc) => {
+                  acc[doc.id] = doc.data().name;
+                  return acc;
+                },
+                {}
+              );
+
+              const updatedExitRecords = exitData
+                .filter((record) => !record.return_time) // Show only students who haven't returned
+                .map((record) => ({
+                  ...record,
+                  studentName:
+                    studentData[record.student_id] ||
+                    'Unknown Student',
+                }));
+
+              setExitRecords(updatedExitRecords);
+            }
+          );
+          return fetchStudents;
+        };
+
+        fetchStudents();
+      }
+    );
+
+    return () => unsubscribe(); // Cleanup listener on component unmount
+  }, []);
+
+  const calculateDuration = (exitTime) => {
+    if (!exitTime) return 'Just left';
+    const exitDate = exitTime.toDate();
+    const now = new Date();
+    const diff = Math.floor((now - exitDate) / 1000); // Get time difference in seconds
+
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+
+    return `${hours}h ${minutes}m ${seconds}s`;
   };
 
   const handleReturn = async (recordId) => {
@@ -65,11 +84,6 @@ const StudentList = () => {
       await updateDoc(recordRef, {
         return_time: serverTimestamp(),
       });
-
-      // Remove the student card from the page
-      setExitRecords((prevRecords) =>
-        prevRecords.filter((record) => record.id !== recordId)
-      );
     } catch (error) {
       console.error('Error updating return time:', error);
     }
@@ -106,6 +120,9 @@ const StudentList = () => {
                           record.exit_time.toDate()
                         ).toLocaleTimeString()
                       : 'Unknown'}
+                  </Typography>
+                  <Typography variant="body2" color="error">
+                    <strong>Time Gone:</strong> {record.duration}
                   </Typography>
                   <Button
                     variant="contained"
