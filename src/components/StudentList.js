@@ -14,13 +14,13 @@ import {
   Grid,
   Button,
   Box,
+  Container,
 } from '@mui/material';
 
 const StudentList = () => {
   const [exitRecords, setExitRecords] = useState([]);
 
   useEffect(() => {
-    // Firestore real-time listener
     const unsubscribe = onSnapshot(
       collection(db, 'exit_records'),
       (snapshot) => {
@@ -30,7 +30,6 @@ const StudentList = () => {
           duration: calculateDuration(doc.data().exit_time), // Initialize duration
         }));
 
-        // Fetch student names and map to exit records
         const fetchStudents = async () => {
           const studentSnapshot = await onSnapshot(
             collection(db, 'students'),
@@ -62,20 +61,32 @@ const StudentList = () => {
       }
     );
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    // Update the timer every second
+    const interval = setInterval(() => {
+      setExitRecords((prevRecords) =>
+        prevRecords.map((record) => ({
+          ...record,
+          duration: calculateDuration(record.exit_time),
+        }))
+      );
+    }, 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const calculateDuration = (exitTime) => {
-    if (!exitTime) return 'Just left';
+    if (!exitTime) return { time: 'Just left', alert: false };
     const exitDate = exitTime.toDate();
     const now = new Date();
-    const diff = Math.floor((now - exitDate) / 1000); // Get time difference in seconds
+    const diff = Math.floor((now - exitDate) / 1000); // Time difference in seconds
 
-    const hours = Math.floor(diff / 3600);
-    const minutes = Math.floor((diff % 3600) / 60);
+    const minutes = Math.floor(diff / 60);
     const seconds = diff % 60;
 
-    return `${hours}h ${minutes}m ${seconds}s`;
+    return { time: `${minutes}m ${seconds}s`, alert: minutes >= 5 }; // Alert if >= 5 minutes
   };
 
   const handleReturn = async (recordId) => {
@@ -90,55 +101,79 @@ const StudentList = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Students Currently Out
-      </Typography>
-      <Grid container spacing={3}>
-        {exitRecords.length === 0 ? (
-          <Typography variant="body1">
-            No students are currently out.
-          </Typography>
-        ) : (
-          exitRecords.map((record) => (
-            <Grid item xs={12} sm={6} md={4} key={record.id}>
-              <Card sx={{ boxShadow: 3, borderRadius: 2 }}>
-                <CardContent>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 'bold' }}
-                  >
-                    {record.studentName}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Destination:</strong> {record.destination}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Exit Time:</strong>{' '}
-                    {record.exit_time
-                      ? new Date(
-                          record.exit_time.toDate()
-                        ).toLocaleTimeString()
-                      : 'Unknown'}
-                  </Typography>
-                  <Typography variant="body2" color="error">
-                    <strong>Time Gone:</strong> {record.duration}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleReturn(record.id)}
-                    sx={{ mt: 2 }}
-                  >
-                    Return
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))
-        )}
-      </Grid>
-    </Box>
+    <Container
+      sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}
+    >
+      <Box sx={{ textAlign: 'center', width: '100%' }}>
+        <Typography variant="h4" gutterBottom>
+          Students Currently Out
+        </Typography>
+        <Grid container spacing={3} justifyContent="center">
+          {exitRecords.length === 0 ? (
+            <Typography variant="body1">
+              No students are currently out.
+            </Typography>
+          ) : (
+            exitRecords.map((record) => (
+              <Grid item xs={12} sm={6} md={4} key={record.id}>
+                <Card
+                  sx={{
+                    boxShadow: 3,
+                    borderRadius: 2,
+                    backgroundColor: record.duration.alert
+                      ? '#FFCCCC'
+                      : '#FFFFFF', // Red if > 5 mins
+                  }}
+                >
+                  <CardContent>
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 'bold' }}
+                    >
+                      {record.studentName}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>Destination:</strong>{' '}
+                      {record.destination}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                    >
+                      <strong>Exit Time:</strong>{' '}
+                      {record.exit_time
+                        ? new Date(
+                            record.exit_time.toDate()
+                          ).toLocaleTimeString()
+                        : 'Unknown'}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color={
+                        record.duration.alert
+                          ? 'error'
+                          : 'text.secondary'
+                      }
+                    >
+                      <strong>Time Gone:</strong>{' '}
+                      {record.duration.time}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleReturn(record.id)}
+                      sx={{ mt: 2 }}
+                    >
+                      Return
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
+      </Box>
+    </Container>
   );
 };
 
