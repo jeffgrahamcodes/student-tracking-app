@@ -16,6 +16,7 @@ import {
   CssBaseline,
   Box,
 } from '@mui/material';
+import logo from './assets/hall-waze.png';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -51,12 +52,35 @@ function App() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      {/* ✅ Navigation Bar */}
-      <AppBar position="static">
+      {/* ✅ Updated Navigation Bar with Logo & Colors */}
+      <AppBar position="static" sx={{ backgroundColor: '#1e3a5f' }}>
+        {' '}
+        {/* Dark Navy Blue */}
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          {/* Logo */}
+          <Box
+            component="img"
+            src={logo}
+            alt="Hall-Waze Logo"
+            sx={{
+              height: 50, // Adjust size as needed
+              width: 50, // Ensure it's a perfect circle
+              borderRadius: '50%', // Makes it circular
+              objectFit: 'cover', // Ensures proper scaling inside the circle
+              border: '2px solid #f8e9d2', // Optional border for visibility
+              mr: 2, // Adds right margin
+            }}
+          />
+
+          {/* App Name */}
+          <Typography
+            variant="h6"
+            sx={{ flexGrow: 1, color: '#f8e9d2', fontWeight: 'bold' }}
+          >
             HALL-WAZE
           </Typography>
+
+          {/* Navigation Buttons */}
           {user && (
             <>
               <Button
@@ -65,7 +89,10 @@ function App() {
               >
                 {showDashboard ? 'Home' : 'Dashboard'}
               </Button>
-              <Typography variant="body1" sx={{ marginRight: 2 }}>
+              <Typography
+                variant="body1"
+                sx={{ marginRight: 2, color: '#f8e9d2' }}
+              >
                 {user.email}
               </Typography>
               <Button color="inherit" onClick={handleSignOut}>
