@@ -4,6 +4,8 @@ import {
   collection,
   getDocs,
   addDoc,
+  query,
+  where,
   serverTimestamp,
 } from 'firebase/firestore';
 import {
@@ -13,20 +15,21 @@ import {
   Box,
   Typography,
   Paper,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 
 const StudentCheckIn = () => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [destination, setDestination] = useState('');
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('error'); // "error" or "success"
 
   useEffect(() => {
     fetchStudents();
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchStudents = async () => {
@@ -36,61 +39,61 @@ const StudentCheckIn = () => {
     );
   };
 
+  const getCheckInCountToday = async (studentId) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const checkOutQuery = query(
+      collection(db, 'exit_records'),
+      where('student_id', '==', studentId),
+      where('exit_time', '>=', today)
+    );
+
+    const checkOutSnapshot = await getDocs(checkOutQuery);
+    return checkOutSnapshot.size;
+  };
+
   const isRestrictedTime = () => {
-    const now = currentTime;
+    const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
-    const dayMinutes = hours * 60 + minutes;
+    const totalMinutes = hours * 60 + minutes;
 
     const restrictedTimes = [
-      { start: 9 * 60 + 30, end: 9 * 60 + 40 }, // Period 1 First 10 Min
-      { start: 10 * 60 + 30, end: 10 * 60 + 40 }, // Period 2 First 10 Min
-      { start: 11 * 60 + 30, end: 11 * 60 + 40 }, // Period 3 First 10 Min
-      { start: 12 * 60 + 30, end: 12 * 60 + 40 }, // Period 4 First 10 Min
-      { start: 14 * 60 + 20, end: 14 * 60 + 30 }, // Period 5 First 10 Min
-      { start: 15 * 60 + 25, end: 15 * 60 + 35 }, // Period 6 First 10 Min
+      { start: 9 * 60, end: 9 * 60 + 10 }, // Period 1 First 10 Minutes
+      { start: 10 * 60 + 50, end: 11 * 60 }, // Period 1 Last 10 Minutes
+      { start: 11 * 60, end: 11 * 60 + 10 }, // Period 2 First 10 Minutes
+      { start: 12 * 60 + 50, end: 13 * 60 }, // Period 2 Last 10 Minutes
     ];
 
     return restrictedTimes.some(
-      ({ start, end }) => dayMinutes >= start && dayMinutes < end
-    );
-  };
-
-  const isRestroomAllowed = () => {
-    const now = currentTime;
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const dayMinutes = hours * 60 + minutes;
-
-    const restroomTimes = [
-      { start: 9 * 60 + 40, end: 10 * 60 + 10 }, // Period 1 Restroom Window
-      { start: 10 * 60 + 35, end: 11 * 60 + 20 }, // Period 2 Restroom Window
-      { start: 12 * 60 + 5, end: 12 * 60 + 50 }, // Period 3 Restroom Window
-      { start: 13 * 60 + 20, end: 14 * 60 + 5 }, // Period 4 Restroom Window
-      { start: 14 * 60 + 30, end: 15 * 60 }, // Period 5 Restroom Window
-      { start: 15 * 60 + 25, end: 16 * 60 }, // Period 6 Restroom Window
-    ];
-
-    return restroomTimes.some(
-      ({ start, end }) => dayMinutes >= start && dayMinutes < end
+      ({ start, end }) => totalMinutes >= start && totalMinutes < end
     );
   };
 
   const handleCheckOut = async () => {
     if (!selectedStudent || !destination) {
-      alert('Select a student and destination');
-      return;
-    }
-
-    if (isRestrictedTime()) {
-      alert(
-        'Hall passes are not allowed during the first and last 10 minutes of class.'
+      showAlert(
+        '⚠️ Please select a student and destination.',
+        'error'
       );
       return;
     }
 
-    if (destination === 'Restroom' && !isRestroomAllowed()) {
-      alert('Restrooms are only available at specific times.');
+    if (isRestrictedTime()) {
+      showAlert(
+        '🚨 You cannot check out during the first or last 10 minutes of class.',
+        'error'
+      );
+      return;
+    }
+
+    const checkInCount = await getCheckInCountToday(selectedStudent);
+    if (checkInCount >= 3) {
+      showAlert(
+        '🚨 STUDENT LIMIT REACHED 🚨\n\nThis student has already checked out 3 times today. No further checkouts allowed.',
+        'error'
+      );
       return;
     }
 
@@ -100,9 +103,15 @@ const StudentCheckIn = () => {
       exit_time: serverTimestamp(),
     });
 
-    alert('Student checked out successfully!');
+    showAlert('✅ Student checked out successfully!', 'success');
     setSelectedStudent('');
     setDestination('');
+  };
+
+  const showAlert = (message, type) => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertOpen(true);
   };
 
   return (
@@ -154,6 +163,40 @@ const StudentCheckIn = () => {
       >
         Check Out
       </Button>
+
+      {/* Full-Screen Alert Dialog with Dynamic Background */}
+      <Dialog open={alertOpen} fullScreen>
+        <DialogContent
+          sx={{
+            backgroundColor:
+              alertType === 'error' ? '#d32f2f' : '#2e7d32', // Red for errors, Green for success
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="h3" fontWeight="bold" sx={{ mb: 4 }}>
+            {alertMessage}
+          </Typography>
+          <DialogActions>
+            <Button
+              variant="contained"
+              sx={{
+                backgroundColor: '#ffffff',
+                color: alertType === 'error' ? '#d32f2f' : '#2e7d32',
+                fontSize: 20,
+              }}
+              onClick={() => setAlertOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogActions>
+        </DialogContent>
+      </Dialog>
     </Paper>
   );
 };
