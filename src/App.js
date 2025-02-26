@@ -12,21 +12,28 @@ import {
   Typography,
   Button,
   Box,
-  Container,
 } from '@mui/material';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore';
 import StudentCheckIn from './components/StudentCheckIn';
 import StudentList from './components/StudentList';
 import EditStudent from './components/EditStudent';
 import AddStudent from './components/AddStudent';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
-import logo from './assets/hall-waze-logo.png'; // Ensure the logo is in the assets folder
+import logo from './assets/hall-waze-logo.png';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [teacherName, setTeacherName] = useState('');
   const [role, setRole] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -38,12 +45,20 @@ function App() {
         setAuthChecked(true);
 
         if (currentUser) {
-          const userRef = doc(db, 'user_roles', currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            setRole(userSnap.data().role);
+          const teacherRef = collection(db, 'user_roles');
+          const q = query(
+            teacherRef,
+            where('email', '==', currentUser.email)
+          );
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const teacherData = querySnapshot.docs[0].data();
+            setTeacherName(teacherData.name || 'Unknown Teacher');
+            setRole(teacherData.role || '');
           }
         } else {
+          setTeacherName('');
           setRole('');
         }
       }
@@ -55,6 +70,7 @@ function App() {
   const handleSignOut = async () => {
     await signOut(auth);
     setUser(null);
+    setTeacherName('');
     setRole('');
   };
 
@@ -79,7 +95,7 @@ function App() {
               <img
                 src={logo}
                 alt="Hall-Waze Logo"
-                style={{ height: 40, width: 40, borderRadius: '50%' }} // Circular logo in navbar
+                style={{ height: 40, width: 40, borderRadius: '50%' }}
               />
               <Typography
                 variant="h6"
@@ -136,13 +152,13 @@ function App() {
               )}
             </Box>
 
-            {/* Right-Aligned User Info & Sign Out */}
+            {/* Right-Aligned Teacher Name & Sign Out */}
             {user && (
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
               >
                 <Typography variant="body1" sx={{ color: '#f8e9d2' }}>
-                  {user.email}
+                  {teacherName}
                 </Typography>
                 <Button color="inherit" onClick={handleSignOut}>
                   Sign Out
@@ -209,7 +225,7 @@ function App() {
 // Custom Auth Page with Enlarged Circular Logo
 const AuthPage = () => {
   return (
-    <Container
+    <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -222,14 +238,14 @@ const AuthPage = () => {
         src={logo}
         alt="Hall-Waze Logo"
         style={{
-          height: 300,
-          width: 300,
+          height: 150,
+          width: 150,
           borderRadius: '50%',
           marginBottom: 20,
-        }} // Larger circular logo
+        }}
       />
       <Auth />
-    </Container>
+    </Box>
   );
 };
 
