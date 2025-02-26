@@ -25,8 +25,8 @@ import {
 } from 'firebase/firestore';
 import StudentCheckIn from './components/StudentCheckIn';
 import StudentList from './components/StudentList';
-import EditStudent from './components/EditStudent';
 import AddStudent from './components/AddStudent';
+import UploadSchedule from './components/UploadSchedule'; // Import Upload Page
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import logo from './assets/hall-waze-logo.png';
@@ -85,10 +85,10 @@ function App() {
   return (
     <Router>
       <Box sx={{ flexGrow: 1 }}>
-        {/* Always show the navbar */}
+        {/* Navbar */}
         <AppBar position="static" sx={{ backgroundColor: '#1e3a5f' }}>
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            {/* Left-Aligned Links */}
+            {/* Left Navigation */}
             <Box
               sx={{ display: 'flex', gap: 2, alignItems: 'center' }}
             >
@@ -135,9 +135,9 @@ function App() {
                       <Button
                         color="inherit"
                         component={Link}
-                        to="/edit-student"
+                        to="/upload-schedule"
                       >
-                        Edit Student
+                        Upload Schedule
                       </Button>
                       <Button
                         color="inherit"
@@ -152,7 +152,7 @@ function App() {
               )}
             </Box>
 
-            {/* Right-Aligned Teacher Name & Sign Out */}
+            {/* Right Side: Teacher Name & Sign Out */}
             {user && (
               <Box
                 sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
@@ -193,10 +193,10 @@ function App() {
                 }
               />
               <Route
-                path="/edit-student"
+                path="/upload-schedule"
                 element={
                   role === 'admin' ? (
-                    <EditStudent />
+                    <UploadSchedule />
                   ) : (
                     <Navigate to="/" />
                   )

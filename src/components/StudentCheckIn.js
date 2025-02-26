@@ -47,15 +47,19 @@ const StudentCheckIn = () => {
     const q = query(studentsRef, where('teacher', '==', teacherName));
     const querySnapshot = await getDocs(q);
 
-    // Extract unique period values and format them
-    const uniquePeriods = [
-      ...new Set(
-        querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return formatPeriod(data.period, data.meet_days); // ✅ Using correct field names
-        })
-      ),
-    ];
+    // Extract unique period values
+    const periodSet = new Set(); // Use a Set to prevent duplicates
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      periodSet.add(
+        JSON.stringify(formatPeriod(data.period, data.meet_days))
+      ); // Store unique stringified period objects
+    });
+
+    const uniquePeriods = Array.from(periodSet).map((item) =>
+      JSON.parse(item)
+    ); // Convert back to array of objects
 
     setPeriods(uniquePeriods);
   };
