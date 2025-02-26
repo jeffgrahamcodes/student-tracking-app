@@ -47,21 +47,40 @@ const StudentCheckIn = () => {
     const q = query(studentsRef, where('teacher', '==', teacherName));
     const querySnapshot = await getDocs(q);
 
-    // Extract unique period values
-    const periodSet = new Set(); // Use a Set to prevent duplicates
+    // Use a Set to prevent duplicates and ensure unique period entries
+    const periodSet = new Set();
 
     querySnapshot.docs.forEach((doc) => {
       const data = doc.data();
       periodSet.add(
         JSON.stringify(formatPeriod(data.period, data.meet_days))
-      ); // Store unique stringified period objects
+      ); // Store unique period objects as strings
     });
 
-    const uniquePeriods = Array.from(periodSet).map((item) =>
-      JSON.parse(item)
-    ); // Convert back to array of objects
+    // Convert back to array of objects and sort them correctly
+    const uniqueSortedPeriods = Array.from(periodSet)
+      .map((item) => JSON.parse(item)) // Convert JSON strings back to objects
+      .sort((a, b) => {
+        // Sort by period number first
+        if (a.period !== b.period) return a.period - b.period;
 
-    setPeriods(uniquePeriods);
+        // If same period, sort (Core) first, then (A), then (B)
+        const priority = { Core: 0, A: 1, B: 2 };
+        const labelA = a.label.includes('(Core)')
+          ? 'Core'
+          : a.label.includes('(A)')
+          ? 'A'
+          : 'B';
+        const labelB = b.label.includes('(Core)')
+          ? 'Core'
+          : b.label.includes('(A)')
+          ? 'A'
+          : 'B';
+
+        return priority[labelA] - priority[labelB]; // Ensure (Core) → (A) → (B) order
+      });
+
+    setPeriods(uniqueSortedPeriods);
   };
 
   const formatPeriod = (period, meet_days) => {
