@@ -64,20 +64,20 @@ const StudentCheckIn = () => {
         // Sort by period number first
         if (a.period !== b.period) return a.period - b.period;
 
-        // If same period, sort (Core) first, then (A), then (B)
-        const priority = { Core: 0, A: 1, B: 2 };
-        const labelA = a.label.includes('(Core)')
-          ? 'Core'
-          : a.label.includes('(A)')
+        // If same period, sort (A) before (B)
+        const priority = { A: 1, B: 2 };
+        const labelA = a.label.includes('(A)')
           ? 'A'
-          : 'B';
-        const labelB = b.label.includes('(Core)')
-          ? 'Core'
-          : b.label.includes('(A)')
+          : a.label.includes('(B)')
+          ? 'B'
+          : '';
+        const labelB = b.label.includes('(A)')
           ? 'A'
-          : 'B';
+          : b.label.includes('(B)')
+          ? 'B'
+          : '';
 
-        return priority[labelA] - priority[labelB]; // Ensure (Core) → (A) → (B) order
+        return (priority[labelA] || 0) - (priority[labelB] || 0);
       });
 
     setPeriods(uniqueSortedPeriods);
@@ -85,7 +85,8 @@ const StudentCheckIn = () => {
 
   const formatPeriod = (period, meet_days) => {
     let label = `Period ${period}`;
-    if (meet_days === 12) label += ' (Core)';
+    if (meet_days === 12)
+      label = `Period 1`; // 🔥 Replace "Core" with "Period 1"
     else if (meet_days === 1) label += ' (A)';
     else if (meet_days === 2) label += ' (B)';
     return { period, label };
