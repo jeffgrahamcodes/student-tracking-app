@@ -92,10 +92,14 @@ function App() {
   const fetchAllUsers = async () => {
     const userRef = collection(db, 'user_roles');
     const querySnapshot = await getDocs(userRef);
-    const users = querySnapshot.docs.map((doc) => ({
-      email: doc.id,
-      name: doc.data().name || 'Unknown',
-    }));
+
+    const users = querySnapshot.docs
+      .map((doc) => ({
+        email: doc.id,
+        name: doc.data().name || 'Unknown',
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)); // 🔥 Sort alphabetically
+
     setAllUsers(users);
   };
 
