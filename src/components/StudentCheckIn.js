@@ -13,17 +13,17 @@ import {
   Paper,
 } from '@mui/material';
 
-const StudentCheckIn = () => {
+const StudentCheckIn = ({ impersonateUser }) => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [destination, setDestination] = useState('');
   const [currentTeacher, setCurrentTeacher] = useState(null);
   const [period, setPeriod] = useState('');
-  const [periods, setPeriods] = useState([]); // Stores periods available for the teacher
+  const [periods, setPeriods] = useState([]);
 
   useEffect(() => {
     fetchTeacherDetails();
-  }, []);
+  }, [impersonateUser]);
 
   const fetchTeacherDetails = async () => {
     if (!auth.currentUser) return;
@@ -31,7 +31,7 @@ const StudentCheckIn = () => {
     const teacherRef = collection(db, 'user_roles');
     const q = query(
       teacherRef,
-      where('email', '==', auth.currentUser.email)
+      where('email', '==', impersonateUser || auth.currentUser.email) // 👈 Use impersonated user if set
     );
     const querySnapshot = await getDocs(q);
 
@@ -57,14 +57,11 @@ const StudentCheckIn = () => {
       ); // Store unique period objects as strings
     });
 
-    // Convert back to array of objects and sort them correctly
     const uniqueSortedPeriods = Array.from(periodSet)
-      .map((item) => JSON.parse(item)) // Convert JSON strings back to objects
+      .map((item) => JSON.parse(item))
       .sort((a, b) => {
-        // Sort by period number first
         if (a.period !== b.period) return a.period - b.period;
 
-        // If same period, sort (A) before (B)
         const priority = { A: 1, B: 2 };
         const labelA = a.label.includes('(A)')
           ? 'A'
@@ -99,7 +96,7 @@ const StudentCheckIn = () => {
     const q = query(
       studentsRef,
       where('teacher', '==', currentTeacher),
-      where('period', '==', period) // ✅ Using correct field name
+      where('period', '==', period)
     );
 
     const querySnapshot = await getDocs(q);
@@ -148,7 +145,7 @@ const StudentCheckIn = () => {
         value={selectedStudent}
         onChange={(e) => setSelectedStudent(e.target.value)}
         margin="normal"
-        disabled={!period} // Disable until a period is selected
+        disabled={!period}
       >
         {students.map((student) => (
           <MenuItem key={student.id} value={student.id}>

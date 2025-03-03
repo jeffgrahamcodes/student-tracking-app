@@ -12,6 +12,10 @@ import {
   Typography,
   Button,
   Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -27,7 +31,7 @@ import StudentCheckIn from './components/StudentCheckIn';
 import StudentList from './components/StudentList';
 import AddStudent from './components/AddStudent';
 import UploadSchedule from './components/UploadSchedule';
-import UploadUserRoles from './components/UploadUserRoles'; // 🔥 New upload page for user roles
+import UploadUserRoles from './components/UploadUserRoles';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import FirestoreDebugger from './components/FirestoreDebugger';
@@ -38,6 +42,8 @@ function App() {
   const [teacherName, setTeacherName] = useState('');
   const [role, setRole] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
+  const [impersonateUser, setImpersonateUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -77,11 +83,32 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (role === 'superuser') {
+      fetchAllUsers();
+    }
+  }, [role]);
+
+  const fetchAllUsers = async () => {
+    const userRef = collection(db, 'user_roles');
+    const querySnapshot = await getDocs(userRef);
+    const users = querySnapshot.docs.map((doc) => ({
+      email: doc.id,
+      name: doc.data().name || 'Unknown',
+    }));
+    setAllUsers(users);
+  };
+
   const handleSignOut = async () => {
     await signOut(auth);
     setUser(null);
     setTeacherName('');
     setRole('');
+    setImpersonateUser(null);
+  };
+
+  const handleImpersonate = (event) => {
+    setImpersonateUser(event.target.value);
   };
 
   if (!authChecked) {
@@ -160,13 +187,34 @@ function App() {
                   )}
 
                   {role === 'superuser' && (
-                    <Button
-                      color="inherit"
-                      component={Link}
-                      to="/upload-user-roles"
-                    >
-                      Upload User Roles
-                    </Button>
+                    <>
+                      <Button
+                        color="inherit"
+                        component={Link}
+                        to="/upload-user-roles"
+                      >
+                        Upload User Roles
+                      </Button>
+                      {/* Superuser Impersonation Dropdown */}
+                      <FormControl
+                        sx={{ minWidth: 200, marginLeft: 2 }}
+                      >
+                        <InputLabel>Impersonate User</InputLabel>
+                        <Select
+                          value={impersonateUser}
+                          onChange={handleImpersonate}
+                        >
+                          {allUsers.map((user) => (
+                            <MenuItem
+                              key={user.email}
+                              value={user.email}
+                            >
+                              {user.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </>
                   )}
                 </>
               )}
@@ -196,7 +244,9 @@ function App() {
                 path="/"
                 element={
                   <>
-                    <StudentCheckIn />
+                    <StudentCheckIn
+                      impersonateUser={impersonateUser}
+                    />
                     <StudentList />
                   </>
                 }
