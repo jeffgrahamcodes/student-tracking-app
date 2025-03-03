@@ -20,10 +20,14 @@ const Auth = () => {
         setUser(currentUser);
 
         if (currentUser) {
-          const userRef = doc(db, 'user_roles', currentUser.uid);
+          // Fetch role from Firestore using email as the document ID
+          const userRef = doc(db, 'user_roles', currentUser.email);
           const userSnap = await getDoc(userRef);
+
           if (userSnap.exists()) {
             setRole(userSnap.data().role);
+          } else {
+            setRole('Unauthorized');
           }
         } else {
           setRole('');
@@ -42,16 +46,33 @@ const Auth = () => {
     if (!email || !password) return;
 
     try {
+      // 🔥 Check if email exists in Firestore before allowing signup
+      const userRef = doc(db, 'user_roles', email);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        alert(
+          'Your email is not authorized. Contact an administrator.'
+        );
+        return;
+      }
+
+      // 🔥 Email exists in Firestore, proceed with signup
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
         password
       );
-      await setDoc(doc(db, 'user_roles', userCredential.user.uid), {
-        email,
-        role: 'teacher',
+
+      // 🔥 Store user details in Firestore `users` collection using UID
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name: userSnap.data().full_name,
+        email: email,
+        role: userSnap.data().role,
+        createdAt: new Date(),
       });
-      alert('Account created! Default role: Teacher');
+
+      alert(`Account created! Role: ${userSnap.data().role}`);
     } catch (error) {
       alert(error.message);
     }
@@ -72,7 +93,7 @@ const Auth = () => {
   const handleSignOut = async () => {
     await signOut(auth);
     setUser(null);
-    setRole(''); // Reset UI state after signing out
+    setRole('');
   };
 
   return (

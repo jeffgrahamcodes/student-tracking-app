@@ -26,9 +26,11 @@ import {
 import StudentCheckIn from './components/StudentCheckIn';
 import StudentList from './components/StudentList';
 import AddStudent from './components/AddStudent';
-import UploadSchedule from './components/UploadSchedule'; // Import Upload Page
+import UploadSchedule from './components/UploadSchedule';
+import UploadUserRoles from './components/UploadUserRoles'; // 🔥 New upload page for user roles
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import FirestoreDebugger from './components/FirestoreDebugger';
 import logo from './assets/hall-waze-logo.png';
 
 function App() {
@@ -45,17 +47,25 @@ function App() {
         setAuthChecked(true);
 
         if (currentUser) {
-          const teacherRef = collection(db, 'user_roles');
-          const q = query(
-            teacherRef,
-            where('email', '==', currentUser.email)
-          );
-          const querySnapshot = await getDocs(q);
+          try {
+            const userRef = doc(db, 'user_roles', currentUser.email);
+            const userSnap = await getDoc(userRef);
 
-          if (!querySnapshot.empty) {
-            const teacherData = querySnapshot.docs[0].data();
-            setTeacherName(teacherData.name || 'Unknown Teacher');
-            setRole(teacherData.role || '');
+            if (userSnap.exists()) {
+              const userData = userSnap.data();
+              console.log('✅ User Role Found:', userData.role);
+              setTeacherName(userData.name || 'Unknown');
+              setRole(userData.role || '');
+            } else {
+              console.error(
+                '🚨 User role not found for:',
+                currentUser.email
+              );
+              setRole('unauthorized');
+            }
+          } catch (error) {
+            console.error('🚨 Firestore read error:', error);
+            setRole('unauthorized');
           }
         } else {
           setTeacherName('');
@@ -148,6 +158,16 @@ function App() {
                       </Button>
                     </>
                   )}
+
+                  {role === 'superuser' && (
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      to="/upload-user-roles"
+                    >
+                      Upload User Roles
+                    </Button>
+                  )}
                 </>
               )}
             </Box>
@@ -212,10 +232,21 @@ function App() {
                   )
                 }
               />
+              <Route
+                path="/upload-user-roles"
+                element={
+                  role === 'superuser' ? (
+                    <UploadUserRoles />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
+              />
             </>
           ) : (
             <Route path="*" element={<AuthPage />} />
           )}
+          <Route path="/debug" element={<FirestoreDebugger />} />
         </Routes>
       </Box>
     </Router>
