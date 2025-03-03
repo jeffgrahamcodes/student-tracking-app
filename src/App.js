@@ -164,7 +164,7 @@ function App() {
                     Student List
                   </Button>
 
-                  {role === 'admin' && (
+                  {['admin', 'superuser'].includes(role) && (
                     <>
                       <Button
                         color="inherit"
@@ -259,7 +259,7 @@ function App() {
               <Route
                 path="/add-student"
                 element={
-                  role === 'admin' ? (
+                  ['admin', 'superuser'].includes(role) ? (
                     <AddStudent />
                   ) : (
                     <Navigate to="/" />
@@ -269,7 +269,7 @@ function App() {
               <Route
                 path="/upload-schedule"
                 element={
-                  role === 'admin' ? (
+                  ['admin', 'superuser'].includes(role) ? (
                     <UploadSchedule />
                   ) : (
                     <Navigate to="/" />
@@ -279,7 +279,7 @@ function App() {
               <Route
                 path="/dashboard"
                 element={
-                  role === 'admin' ? (
+                  ['admin', 'superuser'].includes(role) ? (
                     <Dashboard />
                   ) : (
                     <Navigate to="/" />
