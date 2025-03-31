@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "student-tracking-app-eba24",
+  "private_key_id": "e553bfed23740d28fd27d45f50cbcabc9041be5c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC1cZgMyPJTgk5N\n58M7y/gG0k4a4efyM2OIPjnQNy8rXR0Ao3Bgo+14wIDuNQ1VpnvnZUFW75CzDy9o\nGi2rdvT3ybN3wxJ2vUnCjFagDv6FK658oL0VGOT7G7Wro+LlKhd4XNPN/mBfjsvC\nmOqJ/bh+Syfhl1PjWt2dc3mubcsvGQ+rXpnD0LVzvCRRtMv79cLniTj5JaT3kZEg\niIxrOT1C7/4DXtJ4uN1yV4oyK4IMwZjpbJqRKgoRbcmbUJFO3w1FM6ad7lFBW+YC\nd3jp5518XPh6xmyaig4d7pD+N8Eu+z4uRVMkMPV0yM+I9mPtKlRAQe2+YwTuFXIM\n2Arif+91AgMBAAECggEAPPwSso1h4Y6lGgtBdBpA4a4TAXcXmjEKjbL4hJLfwE/6\nHQpSDbFbcmAllarwMe8Uqzg9x2Ya+QwsD23pFr4TZSt+rky7KnzBy2mW/hI8Gu+N\nJKd0FiC5aess2yVo8ER/Af4VVKHgq42Xz+7Muhe0yIIjQ/A0inCylybGacnOZqQR\nXptNuIqGkIAQBPnPxyX0Lob1BQoV8Azl3/I/M6Kh/nezYHdfb7gHKdujWt0mmifL\nBApERMBUP+zgKG3fxxcUkrB6S2h3cz6z7L6y2eYQqeQIUjlXCQhy1dU0DH9pELro\njBzS56mpr14I43TZfLfr6Os3tYQ5n0PjJNQbpK1pqwKBgQDXpxm0bsZeKlxyGCLm\n4EYeJLrffBM7oBwzJTEfqk9KIGc1AH0qJQbjzZ9asnfiy+g9JQOnPC0wVzSYAhAT\nwSAFW4GnedtDkpR/M0Nr/BDOmHDg37f099SZIH0A/U9lWLB1ggLA+r+mp/9D6aw2\nCC2C5f81U+qPl6zgSEr2blIhhwKBgQDXZAT4z+vHtcxatMlc74DE1mMhu5uYjcNu\njm0Rmtk0/SaBx3HK7JA+gQ9nqsofUohsCK9aHYP6QoLgDmlJV8+Yj5ivOYT9YXII\nC6ifSZsoiquJSB2LLGGbYqJtit72NVL90b3xPYNCbxhlhqSUlBPQ30PngT6KELBg\nQByNQm5WIwKBgEoATGDPNoDvtmNshuWFBmqnnfy8nfjy+1pNo+rCzYyZS/EzJsBE\njnWzhMBhx6Pq5tm8juFfU/5nnmOfKZctyWgtO3OV7Djm3tA7biJrD/Vk+C8idgS4\n2pplPKAPTKRxZ7QbFgjUwtlUgtLyJ6cu7Tci542MK0x09tzL0fV4a/SXAoGAPYwY\nG50WS8f4MAcu7v6FNjnos8/vI0WHDcVnBzvPS2P3J+h87LZydVndtArKnO6xiuVk\nbgS3HMD6stmLXmjYKkkGITP3e4vn0MK8GWAoFQqi/6R6xLUW4xbpQRIIqiQMpfjU\nJOYl5srmFsTFrKsvimTx+2okG8GvFKHdRsQv0S8CgYAtq9XafFiF0xzyj9W/VbNr\nCVcbUfbbbaZlTD0cGsl2Ae5P4Ftx/3bs/Cm+/rL2LpL2hc4slsCICBYEgKFXx1Vs\nZ5tT9NcomEi59MzR5SwQZfboqUG6FNKgmzAD+q1uaCEyd7rJ2Q8YQpTbNMwMuUaA\n+It2jDtPK0fHmKoAdg1yrQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@student-tracking-app-eba24.iam.gserviceaccount.com",
+  "client_id": "100138772032769152996",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40student-tracking-app-eba24.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
