@@ -35,6 +35,7 @@ import UploadUserRoles from './components/UploadUserRoles';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import FirestoreDebugger from './components/FirestoreDebugger';
+import BulkCreateUsers from './components/BulkCreateUsers'; // Import the bulk creation page
 import logo from './assets/hall-waze-logo.png';
 
 function App() {
@@ -199,6 +200,13 @@ function App() {
                       >
                         Upload User Roles
                       </Button>
+                      <Button
+                        color="inherit"
+                        component={Link}
+                        to="/bulk-create-users"
+                      >
+                        Bulk Create Users
+                      </Button>
                       {/* Superuser Impersonation Dropdown */}
                       <FormControl
                         sx={{ minWidth: 200, marginLeft: 2 }}
@@ -291,6 +299,16 @@ function App() {
                 element={
                   role === 'superuser' ? (
                     <UploadUserRoles />
+                  ) : (
+                    <Navigate to="/" />
+                  )
+                }
+              />
+              <Route
+                path="/bulk-create-users"
+                element={
+                  role === 'superuser' ? (
+                    <BulkCreateUsers />
                   ) : (
                     <Navigate to="/" />
                   )

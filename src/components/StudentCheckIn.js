@@ -26,7 +26,6 @@ const StudentCheckIn = ({ impersonateUser }) => {
   const [period, setPeriod] = useState('');
   const [alert, setAlert] = useState('');
   const [periods, setPeriods] = useState([]);
-  const [teacherEmail, setTeacherEmail] = useState('');
   const [currentTeacher, setCurrentTeacher] = useState('');
 
   const destinations = [
@@ -48,14 +47,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
     const teacherRef = collection(db, 'user_roles');
     const q = query(
       teacherRef,
-      where('email', '==', impersonateUser || auth.currentUser.email),
+      where('email', '==', impersonateUser || auth.currentUser.email)
     );
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
       const teacherData = querySnapshot.docs[0].data();
       setCurrentTeacher(teacherData.name);
-      setTeacherEmail(teacherData.email);
       fetchPeriods(teacherData.email);
     }
   };
@@ -69,7 +67,9 @@ const StudentCheckIn = ({ impersonateUser }) => {
 
     querySnapshot.docs.forEach((doc) => {
       const data = doc.data();
-      periodSet.add(JSON.stringify(formatPeriod(data.period, data.meet_days)));
+      periodSet.add(
+        JSON.stringify(formatPeriod(data.period, data.meet_days))
+      );
     });
 
     const uniqueSortedPeriods = Array.from(periodSet)
@@ -99,7 +99,6 @@ const StudentCheckIn = ({ impersonateUser }) => {
     let label = `Period ${period}`;
     if (meet_days === 1) label += ' (A)';
     else if (meet_days === 2) label += ' (B)';
-    // meet_days === 12 will just show "Period X" — no label
     return { period, label };
   };
 
@@ -109,20 +108,38 @@ const StudentCheckIn = ({ impersonateUser }) => {
     const studentsRef = collection(db, 'student_schedules');
     const q = query(
       studentsRef,
-      where('teacher_email', '==', impersonateUser || auth.currentUser.email),
-      where('period', '==', Number(period)),
+      where(
+        'teacher_email',
+        '==',
+        impersonateUser || auth.currentUser.email
+      ),
+      where('period', '==', Number(period))
     );
     const querySnapshot = await getDocs(q);
 
     const studentList = querySnapshot.docs.map((doc) => {
       const data = doc.data();
       return {
-        student_id: data.student_id,
+        student_id: String(data.student_id),
         name: data.name,
       };
     });
 
-    setStudents(studentList);
+    // ✅ Remove duplicate student_ids
+    const uniqueStudentsMap = new Map();
+    studentList.forEach((student) => {
+      uniqueStudentsMap.set(student.student_id, student);
+    });
+    const uniqueStudents = Array.from(uniqueStudentsMap.values());
+
+    // ✅ Sort by second word in name
+    const sortedBySecondName = uniqueStudents.sort((a, b) => {
+      const secondA = a.name.split(' ')[1]?.toLowerCase() || '';
+      const secondB = b.name.split(' ')[1]?.toLowerCase() || '';
+      return secondA.localeCompare(secondB);
+    });
+
+    setStudents(sortedBySecondName);
   };
 
   useEffect(() => {
@@ -138,21 +155,22 @@ const StudentCheckIn = ({ impersonateUser }) => {
     }
 
     try {
-      // Check how many times the student has left today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       const q = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
-        where('exit_time', '>=', serverTimestamp(today)),
+        where('exit_time', '>=', today)
       );
 
       const snapshot = await getDocs(q);
       const exitCount = snapshot.size;
 
       if (exitCount >= 3) {
-        setAlert('⚠️ This student has already used 3 hall passes today.');
+        setAlert(
+          '⚠️ This student has already used 3 hall passes today.'
+        );
         return;
       }
 
@@ -174,7 +192,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
 
   return (
     <Box sx={{ textAlign: 'center', mt: 3 }}>
-      <Typography variant='h5' gutterBottom>
+      <Typography variant="h5" gutterBottom>
         Hall Pass Check-In
       </Typography>
 
@@ -192,7 +210,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
         <Select
           value={period}
           onChange={(e) => setPeriod(Number(e.target.value))}
-          label='Period'
+          label="Period"
         >
           {periods.map((p) => (
             <MenuItem key={p.label} value={p.period}>
@@ -206,11 +224,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
         <InputLabel>Student</InputLabel>
         <Select
           value={selectedStudent}
-          onChange={(e) => setSelectedStudent(e.target.value)}
-          label='Student'
+          onChange={(e) => setSelectedStudent(String(e.target.value))} // ✅ ensure string
+          label="Student"
         >
           {students.map((s) => (
-            <MenuItem key={s.student_id} value={s.student_id}>
+            <MenuItem key={s.student_id} value={String(s.student_id)}>
+              {' '}
+              {/* ✅ ensure string */}
               {s.name}
             </MenuItem>
           ))}
@@ -222,7 +242,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
         <Select
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          label='Destination'
+          label="Destination"
         >
           {destinations.map((d) => (
             <MenuItem key={d} value={d}>
@@ -233,7 +253,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
       </FormControl>
 
       <Box sx={{ mt: 2 }}>
-        <Button variant='contained' onClick={handleSubmit}>
+        <Button variant="contained" onClick={handleSubmit}>
           Submit
         </Button>
       </Box>
