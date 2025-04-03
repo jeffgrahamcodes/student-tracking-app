@@ -1,71 +1,145 @@
-# Getting Started with Create React App
+# Hall-Waze: Student Hall Pass Tracker
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**Hall-Waze** is a web-based hall pass management system designed for schools to monitor student movement, enforce policies, and provide data insights — all while ensuring a seamless experience for teachers, admins, and superusers.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+### For Teachers
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Secure login with role-based access
+- Filter students by current class period
+- Submit hall passes with student name, destination, and timestamp
+- Limit hall pass use to 3 per day per student
+- Timer on cards, with alert after 5 minutes
+- Prevent use during restricted time windows
+- Return button logs return time and removes student from active list
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### For Admins
 
-### `npm test`
+- Add and manage student records
+- Upload class schedules via Excel
+- Dashboard with student movement pie charts
+- Mark students who require an escort
+- Access and manage user roles
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### For Superusers
 
-### `npm run build`
+- Upload user role spreadsheet (admin, teacher, superuser)
+- Bulk-create Firebase Auth accounts for staff
+- Impersonate other users for troubleshooting
+- Access Firestore debugging page
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Folder Overview
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+/src
+  ├── components/         → React components (CheckIn, List, Auth, etc.)
+  ├── firebase.js         → Firebase config
+  └── App.js              → Route layout and access control
 
-### `npm run eject`
+/public
+  └── index.html          → App entry point
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+firebase.json             → Firebase Hosting config
+firestore.rules           → Firestore access control
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Tech Stack
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **Firebase** (Auth, Firestore, Hosting)
+- **React.js** (Frontend)
+- **MUI** (Material UI for design)
+- **Chart.js** (Data visualization)
+- **XLSX.js** (Excel file handling)
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Setup Guide
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 1. Clone the Repo
 
-### Code Splitting
+```bash
+git clone https://github.com/your-org/hall-waze.git
+cd hall-waze
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 2. Install Dependencies
 
-### Analyzing the Bundle Size
+```bash
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### 3. Connect Firebase
 
-### Making a Progressive Web App
+- Create a Firebase project
+- Enable **Authentication (Email/Password)** and **Firestore**
+- Replace credentials in `src/firebase.js`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 4. Run the App Locally
 
-### Advanced Configuration
+```bash
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## Deployment Guide
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Deploy to Firebase Hosting
 
-### `npm run build` fails to minify
+```bash
+npm run build
+firebase deploy
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-# student-tracking-app
+### Connect Custom Domain (e.g. hall-waze.com)
+
+- Go to **Firebase Hosting → Add Custom Domain**
+- Follow instructions to update A and TXT records
+- Remove any existing conflicting A records (e.g., from Squarespace)
+
+---
+
+## Roles & Access
+
+| Role        | Permissions                                                          |
+| ----------- | -------------------------------------------------------------------- |
+| `teacher`   | Check in students, track exits/returns, enforce limits               |
+| `admin`     | Add students, view dashboard, upload schedule                        |
+| `superuser` | All access: upload user roles, bulk create users, impersonate, debug |
+
+---
+
+## Future Features
+
+- Enforce restroom pass windows by grade & period
+- Improve mobile UI for tablets/phones
+- Alerts when student exceeds hall pass duration
+- Downloadable reports and audit history
+- Automated syncing with SIS data
+
+---
+
+## Why Hall-Waze?
+
+Designed in collaboration with educators to promote:
+
+- Transparency
+- Accountability
+- Student safety
+- Better data-informed decisions
+
+---
+
+## Created By
+
+**Jeff Graham**
+Full-Stack Cloud Developer & Educator
+[LinkedIn](https://linkedin.com/in/jeffgrahamcodes)
+[GitHub](https://github.com/jeffgrahamcodes)
