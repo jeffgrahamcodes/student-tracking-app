@@ -65,8 +65,8 @@ firestore.rules           → Firestore access control
 ### 1. Clone the Repo
 
 ```bash
-git clone https://github.com/your-org/hall-waze.git
-cd hall-waze
+git clone https://github.com/jeffgrahamcodes/student-tracking-app.git
+cd student-tracking-app
 ```
 
 ### 2. Install Dependencies
