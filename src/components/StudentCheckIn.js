@@ -30,10 +30,8 @@ const StudentCheckIn = ({ impersonateUser }) => {
 
   const destinations = [
     'Bathroom',
-    'Water Fountain',
     'Nurse',
     'Office',
-    'Locker',
     'Guidance Counselor',
   ];
 
