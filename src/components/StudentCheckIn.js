@@ -149,29 +149,52 @@ const StudentCheckIn = ({ impersonateUser }) => {
   const handleSubmit = async () => {
     if (!selectedStudent || !destination) {
       setAlert('Please select both a student and a destination.');
+      setTimeout(() => setAlert(''), 10000);
       return;
     }
 
     try {
+      const now = new Date();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const q = query(
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(now.getHours() - 1);
+
+      // Check how many hall passes were used today
+      const dailyQuery = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
         where('exit_time', '>=', today)
       );
-
-      const snapshot = await getDocs(q);
-      const exitCount = snapshot.size;
+      const dailySnapshot = await getDocs(dailyQuery);
+      const exitCount = dailySnapshot.size;
 
       if (exitCount >= 3) {
         setAlert(
           '⚠️ This student has already used 3 hall passes today.'
         );
+        setTimeout(() => setAlert(''), 10000);
         return;
       }
 
+      // Check if a hall pass was used within the last hour
+      const hourQuery = query(
+        collection(db, 'exit_records'),
+        where('student_id', '==', selectedStudent),
+        where('exit_time', '>=', oneHourAgo)
+      );
+      const hourSnapshot = await getDocs(hourQuery);
+
+      if (!hourSnapshot.empty) {
+        setAlert(
+          '⚠️ This student has already used a hall pass in the last hour.'
+        );
+        setTimeout(() => setAlert(''), 10000);
+        return;
+      }
+
+      // All checks passed — record the pass
       await addDoc(collection(db, 'exit_records'), {
         student_id: selectedStudent,
         destination,
@@ -180,11 +203,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
       });
 
       setAlert('✅ Hall pass recorded!');
+      setTimeout(() => setAlert(''), 10000);
       setSelectedStudent('');
       setDestination('');
     } catch (error) {
       console.error('Error recording hall pass:', error);
       setAlert('An error occurred. Please try again.');
+      setTimeout(() => setAlert(''), 10000);
     }
   };
 
