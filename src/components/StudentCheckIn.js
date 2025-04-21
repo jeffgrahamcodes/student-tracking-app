@@ -161,7 +161,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
       const oneHourAgo = new Date();
       oneHourAgo.setHours(now.getHours() - 1);
 
-      // Check how many hall passes were used today
+      // ✅ 1. Check how many passes today
       const dailyQuery = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
@@ -178,7 +178,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
-      // Check if a hall pass was used within the last hour
+      // ✅ 2. Check if student has used a pass in the last hour
       const hourQuery = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
@@ -194,12 +194,31 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
-      // All checks passed — record the pass
+      // ✅ 3. Check if another student is already out for this teacher
+      const activeQuery = query(
+        collection(db, 'exit_records'),
+        where('teacher', '==', currentTeacher),
+        where('return_time', '==', null),
+        where('exit_time', '>=', today)
+      );
+      const activeSnapshot = await getDocs(activeQuery);
+
+      if (!activeSnapshot.empty) {
+        setAlert(
+          '⚠️ Only one student may be out at a time for your class.'
+        );
+        setTimeout(() => setAlert(''), 10000);
+        return;
+      }
+
+      // ✅ 4. All checks passed — record the pass with return_time: null
       await addDoc(collection(db, 'exit_records'), {
         student_id: selectedStudent,
         destination,
         teacher: currentTeacher,
+        period: period, // if available in your state
         exit_time: serverTimestamp(),
+        return_time: null, // ← this makes the query work correctly
       });
 
       setAlert('✅ Hall pass recorded!');
