@@ -146,6 +146,52 @@ const StudentCheckIn = ({ impersonateUser }) => {
     }
   }, [period]);
 
+  const allowedWindows = {
+    6: {
+      1: ['09:40', '10:10'],
+      2: ['11:05', '11:40'],
+      3: ['12:05', '12:50'],
+      4: ['13:20', '14:05'],
+      5: ['14:30', '15:00'],
+      6: ['15:25', '16:00'],
+    },
+    7: {
+      1: ['09:40', '10:10'],
+      2: ['10:35', '11:20'],
+      3: ['12:05', '12:50'],
+      4: ['13:30', '14:05'],
+      5: ['14:30', '15:00'],
+      6: ['15:25', '16:00'],
+    },
+    8: {
+      1: ['09:40', '10:10'],
+      2: ['10:35', '11:20'],
+      3: ['12:05', '12:50'],
+      4: ['13:20', '14:05'],
+      5: ['14:30', '15:00'],
+      6: ['15:25', '16:00'],
+    },
+  };
+
+  const isWithinAllowedTime = (grade, period) => {
+    const window = allowedWindows[grade]?.[period];
+    if (!window) return false;
+
+    const [start, end] = window;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    return (
+      currentMinutes >= startMinutes && currentMinutes <= endMinutes
+    );
+  };
+
   const handleSubmit = async () => {
     if (!selectedStudent || !destination) {
       setAlert('Please select both a student and a destination.');
@@ -161,16 +207,40 @@ const StudentCheckIn = ({ impersonateUser }) => {
       const oneHourAgo = new Date();
       oneHourAgo.setHours(now.getHours() - 1);
 
-      // ✅ 1. Check how many passes today
+      // ✅ Fetch student grade from schedule
+      const gradeQuery = query(
+        collection(db, 'student_schedules'),
+        where('student_id', '==', selectedStudent),
+        where('period', '==', Number(period))
+      );
+
+      const gradeSnapshot = await getDocs(gradeQuery);
+      if (gradeSnapshot.empty) {
+        setAlert('⚠️ Student schedule not found for this period.');
+        setTimeout(() => setAlert(''), 10000);
+        return;
+      }
+
+      const studentData = gradeSnapshot.docs[0].data();
+      const studentGrade = Number(studentData.grade);
+
+      // ✅ Block if outside allowed restroom window
+      if (!isWithinAllowedTime(studentGrade, Number(period))) {
+        setAlert(
+          '⛔ Hall passes are not allowed at this time for this period.'
+        );
+        setTimeout(() => setAlert(''), 10000);
+        return;
+      }
+
+      // ✅ Check for 3-per-day limit
       const dailyQuery = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
         where('exit_time', '>=', today)
       );
       const dailySnapshot = await getDocs(dailyQuery);
-      const exitCount = dailySnapshot.size;
-
-      if (exitCount >= 3) {
+      if (dailySnapshot.size >= 3) {
         setAlert(
           '⚠️ This student has already used 3 hall passes today.'
         );
@@ -178,14 +248,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
-      // ✅ 2. Check if student has used a pass in the last hour
+      // ✅ Check for 1-per-hour limit
       const hourQuery = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
         where('exit_time', '>=', oneHourAgo)
       );
       const hourSnapshot = await getDocs(hourQuery);
-
       if (!hourSnapshot.empty) {
         setAlert(
           '⚠️ This student has already used a hall pass in the last hour.'
@@ -194,7 +263,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
-      // ✅ 3. Check if another student is already out for this teacher
+      // ✅ Check if another student is already out for this teacher
       const activeQuery = query(
         collection(db, 'exit_records'),
         where('teacher', '==', currentTeacher),
@@ -202,7 +271,6 @@ const StudentCheckIn = ({ impersonateUser }) => {
         where('exit_time', '>=', today)
       );
       const activeSnapshot = await getDocs(activeQuery);
-
       if (!activeSnapshot.empty) {
         setAlert(
           '⚠️ Only one student may be out at a time for your class.'
@@ -211,14 +279,14 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
-      // ✅ 4. All checks passed — record the pass with return_time: null
+      // ✅ All checks passed — record hall pass
       await addDoc(collection(db, 'exit_records'), {
         student_id: selectedStudent,
         destination,
         teacher: currentTeacher,
-        period: period, // if available in your state
+        period: period,
         exit_time: serverTimestamp(),
-        return_time: null, // ← this makes the query work correctly
+        return_time: null,
       });
 
       setAlert('✅ Hall pass recorded!');
