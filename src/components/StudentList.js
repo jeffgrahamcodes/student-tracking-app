@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
   collection,
   onSnapshot,
   doc,
   updateDoc,
   serverTimestamp,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore';
 import {
   Card,
@@ -20,68 +23,13 @@ import {
 const StudentList = () => {
   const [exitRecords, setExitRecords] = useState([]);
 
-  useEffect(() => {
-    const unsubscribeExitRecords = onSnapshot(
-      collection(db, 'exit_records'),
-      (snapshot) => {
-        const exitData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          duration: calculateDuration(doc.data().exit_time),
-        }));
-
-        const unsubscribeStudents = onSnapshot(
-          collection(db, 'student_schedules'),
-          (studentSnap) => {
-            const studentData = studentSnap.docs.reduce(
-              (acc, doc) => {
-                const data = doc.data();
-                acc[data.student_id] = data.name;
-                return acc;
-              },
-              {}
-            );
-
-            const updatedExitRecords = exitData
-              .filter((record) => !record.return_time)
-              .map((record) => ({
-                ...record,
-                studentName:
-                  studentData[record.student_id] || 'Unknown Student',
-              }));
-
-            setExitRecords(updatedExitRecords);
-          }
-        );
-
-        return () => unsubscribeStudents();
-      }
-    );
-
-    const interval = setInterval(() => {
-      setExitRecords((prevRecords) =>
-        prevRecords.map((record) => ({
-          ...record,
-          duration: calculateDuration(record.exit_time),
-        }))
-      );
-    }, 1000);
-
-    return () => {
-      unsubscribeExitRecords();
-      clearInterval(interval);
-    };
-  }, []);
-
   const calculateDuration = (exitTime) => {
     if (!exitTime) return { time: 'Just left', alert: false };
     const exitDate = exitTime.toDate();
     const now = new Date();
-    const diff = Math.floor((now - exitDate) / 1000); // Time difference in seconds
-
+    const diff = Math.floor((now - exitDate) / 1000); // seconds
     const minutes = Math.floor(diff / 60);
     const seconds = diff % 60;
-
     return { time: `${minutes}m ${seconds}s`, alert: minutes >= 5 };
   };
 
@@ -95,6 +43,61 @@ const StudentList = () => {
       console.error('Error updating return time:', error);
     }
   };
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const teacherQuery = query(
+      collection(db, 'exit_records'),
+      where('teacher_email', '==', auth.currentUser.email),
+      where('return_time', '==', null)
+    );
+
+    const unsubscribeExitRecords = onSnapshot(
+      teacherQuery,
+      async (snapshot) => {
+        const exitData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          duration: calculateDuration(doc.data().exit_time),
+        }));
+
+        const studentSnapshot = await getDocs(
+          collection(db, 'student_schedules')
+        );
+        const studentData = studentSnapshot.docs.reduce(
+          (acc, doc) => {
+            const data = doc.data();
+            acc[data.student_id] = data.name;
+            return acc;
+          },
+          {}
+        );
+
+        const updatedExitRecords = exitData.map((record) => ({
+          ...record,
+          studentName:
+            studentData[record.student_id] || 'Unknown Student',
+        }));
+
+        setExitRecords(updatedExitRecords);
+      }
+    );
+
+    const interval = setInterval(() => {
+      setExitRecords((prev) =>
+        prev.map((record) => ({
+          ...record,
+          duration: calculateDuration(record.exit_time),
+        }))
+      );
+    }, 1000);
+
+    return () => {
+      unsubscribeExitRecords();
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <Container

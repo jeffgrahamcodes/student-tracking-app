@@ -284,6 +284,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
         student_id: selectedStudent,
         destination,
         teacher: currentTeacher,
+        teacher_email: auth.currentUser.email, // ✅ Add this
         period: period,
         exit_time: serverTimestamp(),
         return_time: null,
