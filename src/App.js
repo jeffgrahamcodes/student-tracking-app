@@ -32,6 +32,7 @@ import StudentList from './components/StudentList';
 import AddStudent from './components/AddStudent';
 import UploadSchedule from './components/UploadSchedule';
 import UploadUserRoles from './components/UploadUserRoles';
+import AddClass from './components/AddClass';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import FirestoreDebugger from './components/FirestoreDebugger';
@@ -164,6 +165,13 @@ function App() {
                   >
                     Student List
                   </Button>
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/add-class"
+                  >
+                    Add Class
+                  </Button>
 
                   {['admin', 'superuser'].includes(role) && (
                     <>
@@ -264,6 +272,7 @@ function App() {
                 }
               />
               <Route path="/student-list" element={<StudentList />} />
+              <Route path="/add-class" element={<AddClass />} />
               <Route
                 path="/add-student"
                 element={
