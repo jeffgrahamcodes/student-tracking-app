@@ -1,3 +1,5 @@
+// StudentCheckIn.js
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -23,26 +25,23 @@ const StudentCheckIn = ({ impersonateUser }) => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [destination, setDestination] = useState('');
-  const [period, setPeriod] = useState('');
+  const [classId, setClassId] = useState('');
   const [alert, setAlert] = useState('');
-  const [periods, setPeriods] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [teacherEmail, setTeacherEmail] = useState('');
   const [currentTeacher, setCurrentTeacher] = useState('');
+  const [destinations, setDestinations] = useState([]);
 
-  const destinations = [
-    'Bathroom',
-    'Nurse',
-    'Office',
-    'Guidance Counselor',
-  ];
-
+  // Fetch teacher and class info
   useEffect(() => {
     fetchTeacherDetails();
+    fetchDestinations();
   }, [impersonateUser]);
 
   const fetchTeacherDetails = async () => {
     if (!auth.currentUser) return;
 
-    const teacherRef = collection(db, 'user_roles');
+    const teacherRef = collection(db, 'teachers');
     const q = query(
       teacherRef,
       where('email', '==', impersonateUser || auth.currentUser.email)
@@ -52,252 +51,132 @@ const StudentCheckIn = ({ impersonateUser }) => {
     if (!querySnapshot.empty) {
       const teacherData = querySnapshot.docs[0].data();
       setCurrentTeacher(teacherData.name);
-      fetchPeriods(teacherData.email);
+      setTeacherEmail(teacherData.email);
+      fetchClasses(teacherData.teacher_id);
     }
   };
 
-  const fetchPeriods = async (email) => {
-    const studentsRef = collection(db, 'student_schedules');
-    const q = query(studentsRef, where('teacher_email', '==', email));
+  const fetchClasses = async (teacherId) => {
+    const classRef = collection(db, 'classes');
+    const q = query(classRef, where('teacher_id', '==', teacherId));
     const querySnapshot = await getDocs(q);
 
-    const periodSet = new Set();
-
-    querySnapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      periodSet.add(
-        JSON.stringify(formatPeriod(data.period, data.meet_days))
-      );
-    });
-
-    const uniqueSortedPeriods = Array.from(periodSet)
-      .map((item) => JSON.parse(item))
-      .sort((a, b) => {
-        if (a.period !== b.period) return a.period - b.period;
-
-        const priority = { A: 1, B: 2 };
-        const labelA = a.label.includes('(A)')
-          ? 'A'
-          : a.label.includes('(B)')
-          ? 'B'
-          : '';
-        const labelB = b.label.includes('(A)')
-          ? 'A'
-          : b.label.includes('(B)')
-          ? 'B'
-          : '';
-
-        return (priority[labelA] || 0) - (priority[labelB] || 0);
-      });
-
-    setPeriods(uniqueSortedPeriods);
-  };
-
-  const formatPeriod = (period, meet_days) => {
-    let label = `Period ${period}`;
-    if (meet_days === 1) label += ' (A)';
-    else if (meet_days === 2) label += ' (B)';
-    return { period, label };
-  };
-
-  const fetchStudents = async () => {
-    if (!period) return;
-
-    const studentsRef = collection(db, 'student_schedules');
-    const q = query(
-      studentsRef,
-      where(
-        'teacher_email',
-        '==',
-        impersonateUser || auth.currentUser.email
-      ),
-      where('period', '==', Number(period))
-    );
-    const querySnapshot = await getDocs(q);
-
-    const studentList = querySnapshot.docs.map((doc) => {
+    const classList = querySnapshot.docs.map((doc) => {
       const data = doc.data();
       return {
-        student_id: String(data.student_id),
-        name: data.name,
+        id: data.class_id,
+        label: data.class_name || `Class ${data.class_id}`,
       };
     });
 
-    // ✅ Remove duplicate student_ids
-    const uniqueStudentsMap = new Map();
-    studentList.forEach((student) => {
-      uniqueStudentsMap.set(student.student_id, student);
-    });
-    const uniqueStudents = Array.from(uniqueStudentsMap.values());
+    setClasses(classList);
+  };
 
-    // ✅ Sort by second word in name
-    const sortedBySecondName = uniqueStudents.sort((a, b) => {
-      const secondA = a.name.split(' ')[1]?.toLowerCase() || '';
-      const secondB = b.name.split(' ')[1]?.toLowerCase() || '';
-      return secondA.localeCompare(secondB);
-    });
+  const fetchDestinations = async () => {
+    const destRef = collection(db, 'destinations');
+    const snapshot = await getDocs(destRef);
+    const destList = snapshot.docs.map((doc) => doc.data().name);
+    setDestinations(destList);
+  };
 
-    setStudents(sortedBySecondName);
+  const fetchStudents = async () => {
+    if (!classId) return;
+
+    try {
+      const studentClassRef = collection(db, 'student_classes');
+      const q = query(
+        studentClassRef,
+        where('class_id', '==', classId)
+      );
+      const snapshot = await getDocs(q);
+
+      const studentIds = snapshot.docs.map(
+        (doc) => doc.data().student_id
+      );
+      console.log(
+        'Matched student_ids from student_classes:',
+        studentIds
+      );
+
+      if (studentIds.length === 0) {
+        console.warn('No students found for this class');
+        setStudents([]);
+        return;
+      }
+
+      const studentsRef = collection(db, 'students');
+      const studentsSnap = await getDocs(studentsRef);
+
+      const filteredStudents = studentsSnap.docs
+        .map((doc) => ({ ...doc.data(), docId: doc.id }))
+        .filter(
+          (student) =>
+            student.active &&
+            studentIds.includes(student.student_id) &&
+            student.school_id === 'SAMPLE-SCHOOL'
+        )
+        .map((student) => ({
+          student_id: student.student_id,
+          name: `${student.first_name} ${student.last_name}`,
+        }));
+
+      console.log(
+        'Filtered students for dropdown:',
+        filteredStudents
+      );
+
+      setStudents(filteredStudents);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
   };
 
   useEffect(() => {
-    if (period) {
+    if (classId) {
       fetchStudents();
     }
-  }, [period]);
-
-  const allowedWindows = {
-    6: {
-      1: ['09:40', '10:10'],
-      2: ['11:05', '11:40'],
-      3: ['12:05', '12:50'],
-      4: ['13:20', '14:05'],
-      5: ['14:30', '15:00'],
-      6: ['15:25', '16:00'],
-    },
-    7: {
-      1: ['09:40', '10:10'],
-      2: ['10:35', '11:20'],
-      3: ['12:05', '12:50'],
-      4: ['13:30', '14:05'],
-      5: ['14:30', '15:00'],
-      6: ['15:25', '16:00'],
-    },
-    8: {
-      1: ['09:40', '10:10'],
-      2: ['10:35', '11:20'],
-      3: ['12:05', '12:50'],
-      4: ['13:20', '14:05'],
-      5: ['14:30', '15:00'],
-      6: ['15:25', '16:00'],
-    },
-  };
-
-  const isWithinAllowedTime = (grade, period) => {
-    const window = allowedWindows[grade]?.[period];
-    if (!window) return false;
-
-    const [start, end] = window;
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const [startH, startM] = start.split(':').map(Number);
-    const [endH, endM] = end.split(':').map(Number);
-
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-
-    return (
-      currentMinutes >= startMinutes && currentMinutes <= endMinutes
-    );
-  };
+  }, [classId]);
 
   const handleSubmit = async () => {
     if (!selectedStudent || !destination) {
       setAlert('Please select both a student and a destination.');
-      setTimeout(() => setAlert(''), 10000);
       return;
     }
 
     try {
-      const now = new Date();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const oneHourAgo = new Date();
-      oneHourAgo.setHours(now.getHours() - 1);
-
-      // ✅ Fetch student grade from schedule
-      const gradeQuery = query(
-        collection(db, 'student_schedules'),
-        where('student_id', '==', selectedStudent),
-        where('period', '==', Number(period))
-      );
-
-      const gradeSnapshot = await getDocs(gradeQuery);
-      if (gradeSnapshot.empty) {
-        setAlert('⚠️ Student schedule not found for this period.');
-        setTimeout(() => setAlert(''), 10000);
-        return;
-      }
-
-      const studentData = gradeSnapshot.docs[0].data();
-      const studentGrade = Number(studentData.grade);
-
-      // ✅ Block if outside allowed restroom window
-      if (!isWithinAllowedTime(studentGrade, Number(period))) {
-        setAlert(
-          '⛔ Hall passes are not allowed at this time for this period.'
-        );
-        setTimeout(() => setAlert(''), 10000);
-        return;
-      }
-
-      // ✅ Check for 3-per-day limit
-      const dailyQuery = query(
+      const q = query(
         collection(db, 'exit_records'),
         where('student_id', '==', selectedStudent),
         where('exit_time', '>=', today)
       );
-      const dailySnapshot = await getDocs(dailyQuery);
-      if (dailySnapshot.size >= 3) {
+
+      const snapshot = await getDocs(q);
+      const exitCount = snapshot.size;
+
+      if (exitCount >= 3) {
         setAlert(
           '⚠️ This student has already used 3 hall passes today.'
         );
-        setTimeout(() => setAlert(''), 10000);
         return;
       }
 
-      // ✅ Check for 1-per-hour limit
-      const hourQuery = query(
-        collection(db, 'exit_records'),
-        where('student_id', '==', selectedStudent),
-        where('exit_time', '>=', oneHourAgo)
-      );
-      const hourSnapshot = await getDocs(hourQuery);
-      if (!hourSnapshot.empty) {
-        setAlert(
-          '⚠️ This student has already used a hall pass in the last hour.'
-        );
-        setTimeout(() => setAlert(''), 10000);
-        return;
-      }
-
-      // ✅ Check if another student is already out for this teacher
-      const activeQuery = query(
-        collection(db, 'exit_records'),
-        where('teacher', '==', currentTeacher),
-        where('return_time', '==', null),
-        where('exit_time', '>=', today)
-      );
-      const activeSnapshot = await getDocs(activeQuery);
-      if (!activeSnapshot.empty) {
-        setAlert(
-          '⚠️ Only one student may be out at a time for your class.'
-        );
-        setTimeout(() => setAlert(''), 10000);
-        return;
-      }
-
-      // ✅ All checks passed — record hall pass
       await addDoc(collection(db, 'exit_records'), {
         student_id: selectedStudent,
+        class_id: classId,
         destination,
         teacher: currentTeacher,
-        teacher_email: auth.currentUser.email, // ✅ Add this
-        period: period,
         exit_time: serverTimestamp(),
-        return_time: null,
       });
 
       setAlert('✅ Hall pass recorded!');
-      setTimeout(() => setAlert(''), 10000);
       setSelectedStudent('');
       setDestination('');
     } catch (error) {
       console.error('Error recording hall pass:', error);
       setAlert('An error occurred. Please try again.');
-      setTimeout(() => setAlert(''), 10000);
     }
   };
 
@@ -317,15 +196,15 @@ const StudentCheckIn = ({ impersonateUser }) => {
       )}
 
       <FormControl sx={{ minWidth: 200, m: 1 }}>
-        <InputLabel>Period</InputLabel>
+        <InputLabel>Class</InputLabel>
         <Select
-          value={period}
-          onChange={(e) => setPeriod(Number(e.target.value))}
-          label="Period"
+          value={classId}
+          onChange={(e) => setClassId(e.target.value)}
+          label="Class"
         >
-          {periods.map((p) => (
-            <MenuItem key={p.label} value={p.period}>
-              {p.label}
+          {classes.map((c) => (
+            <MenuItem key={c.id} value={c.id}>
+              {c.label}
             </MenuItem>
           ))}
         </Select>
@@ -335,13 +214,11 @@ const StudentCheckIn = ({ impersonateUser }) => {
         <InputLabel>Student</InputLabel>
         <Select
           value={selectedStudent}
-          onChange={(e) => setSelectedStudent(String(e.target.value))} // ✅ ensure string
+          onChange={(e) => setSelectedStudent(e.target.value)}
           label="Student"
         >
           {students.map((s) => (
-            <MenuItem key={s.student_id} value={String(s.student_id)}>
-              {' '}
-              {/* ✅ ensure string */}
+            <MenuItem key={s.student_id} value={s.student_id}>
               {s.name}
             </MenuItem>
           ))}
