@@ -369,7 +369,20 @@ function App() {
                     </Select>
                   </FormControl>
                 )}
-
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to="/add-class"
+                >
+                  Add Class
+                </Button>
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to="/assign-student"
+                >
+                  Add Student
+                </Button>
                 <Divider
                   orientation="vertical"
                   flexItem
