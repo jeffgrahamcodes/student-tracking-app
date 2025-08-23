@@ -1,4 +1,4 @@
-// StudentCheckIn.js
+// StudentCheckIn.js - Updated to pass selected class ID to parent component
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -42,7 +42,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
-const StudentCheckIn = ({ impersonateUser }) => {
+const StudentCheckIn = ({ impersonateUser, onClassSelect }) => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [destination, setDestination] = useState('');
@@ -62,6 +62,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
     fetchTeacherDetails();
     fetchDestinations();
   }, [impersonateUser]);
+
+  // Notify parent component when class changes
+  useEffect(() => {
+    if (onClassSelect) {
+      onClassSelect(classId);
+    }
+  }, [classId, onClassSelect]);
 
   const fetchTeacherDetails = async () => {
     if (!auth.currentUser) return;
@@ -83,9 +90,24 @@ const StudentCheckIn = ({ impersonateUser }) => {
         setCurrentTeacher(teacherData.name);
         setTeacherEmail(teacherData.email);
         fetchClasses(teacherData.teacher_id);
+      } else {
+        // Fallback if teacher not found in teachers collection
+        setTeacherEmail(impersonateUser || auth.currentUser.email);
+        setCurrentTeacher(
+          auth.currentUser.displayName || auth.currentUser.email
+        );
+        // Still try to fetch classes by email
+        fetchClassesByEmail(
+          impersonateUser || auth.currentUser.email
+        );
       }
     } catch (error) {
       console.error('Error fetching teacher details:', error);
+      // Fallback values
+      setTeacherEmail(impersonateUser || auth.currentUser.email);
+      setCurrentTeacher(
+        auth.currentUser.displayName || auth.currentUser.email
+      );
     }
   };
 
@@ -108,6 +130,43 @@ const StudentCheckIn = ({ impersonateUser }) => {
       setClasses(classList);
     } catch (error) {
       console.error('Error fetching classes:', error);
+    }
+  };
+
+  const fetchClassesByEmail = async (email) => {
+    try {
+      // Try to find classes where teacher_email matches
+      const classRef = collection(db, 'classes');
+      const q = query(classRef, where('teacher_email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        // If no classes found by email, get all classes (fallback for testing)
+        const allClassesSnapshot = await getDocs(classRef);
+        const classList = allClassesSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: data.class_id,
+            label: data.class_name || `Class ${data.class_id}`,
+            period: data.period,
+            room: data.room,
+          };
+        });
+        setClasses(classList);
+      } else {
+        const classList = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: data.class_id,
+            label: data.class_name || `Class ${data.class_id}`,
+            period: data.period,
+            room: data.room,
+          };
+        });
+        setClasses(classList);
+      }
+    } catch (error) {
+      console.error('Error fetching classes by email:', error);
     }
   };
 
@@ -240,12 +299,15 @@ const StudentCheckIn = ({ impersonateUser }) => {
         return;
       }
 
+      // Create the exit record with both teacher name and email
       await addDoc(collection(db, 'exit_records'), {
         student_id: selectedStudent,
         class_id: classId,
         destination,
         teacher: currentTeacher,
+        teacher_email: teacherEmail, // Add this field for filtering
         exit_time: serverTimestamp(),
+        return_time: null,
       });
 
       setAlert(
@@ -285,6 +347,13 @@ const StudentCheckIn = ({ impersonateUser }) => {
     acc[category].push(dest);
     return acc;
   }, {});
+
+  const handleClassChange = (event) => {
+    const newClassId = event.target.value;
+    setClassId(newClassId);
+    // Reset student selection when class changes
+    setSelectedStudent('');
+  };
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
@@ -349,7 +418,7 @@ const StudentCheckIn = ({ impersonateUser }) => {
                   <InputLabel>Select Class</InputLabel>
                   <Select
                     value={classId}
-                    onChange={(e) => setClassId(e.target.value)}
+                    onChange={handleClassChange}
                     label="Select Class"
                     startAdornment={
                       <SchoolIcon

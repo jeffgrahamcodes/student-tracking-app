@@ -20,7 +20,7 @@ import {
   Container,
 } from '@mui/material';
 
-const StudentList = () => {
+const StudentList = ({ selectedClassId }) => {
   const [exitRecords, setExitRecords] = useState([]);
 
   const calculateDuration = (exitTime) => {
@@ -47,42 +47,85 @@ const StudentList = () => {
   useEffect(() => {
     if (!auth.currentUser) return;
 
-    const teacherQuery = query(
-      collection(db, 'exit_records'),
-      where('teacher_email', '==', auth.currentUser.email),
-      where('return_time', '==', null)
-    );
+    let unsubscribeExitRecords;
 
-    const unsubscribeExitRecords = onSnapshot(
-      teacherQuery,
-      async (snapshot) => {
-        const exitData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          duration: calculateDuration(doc.data().exit_time),
-        }));
+    const setupListener = async () => {
+      let exitQuery;
 
-        const studentSnapshot = await getDocs(
-          collection(db, 'student_schedules')
+      // If a class is selected, filter by class_id
+      if (selectedClassId) {
+        exitQuery = query(
+          collection(db, 'exit_records'),
+          where('class_id', '==', selectedClassId),
+          where('return_time', '==', null)
         );
-        const studentData = studentSnapshot.docs.reduce(
-          (acc, doc) => {
-            const data = doc.data();
-            acc[data.student_id] = data.name;
-            return acc;
-          },
-          {}
+      } else {
+        // If no class selected, show all exit records for the current teacher
+        exitQuery = query(
+          collection(db, 'exit_records'),
+          where('teacher_email', '==', auth.currentUser.email),
+          where('return_time', '==', null)
         );
-
-        const updatedExitRecords = exitData.map((record) => ({
-          ...record,
-          studentName:
-            studentData[record.student_id] || 'Unknown Student',
-        }));
-
-        setExitRecords(updatedExitRecords);
       }
-    );
+
+      unsubscribeExitRecords = onSnapshot(
+        exitQuery,
+        async (snapshot) => {
+          const exitData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            duration: calculateDuration(doc.data().exit_time),
+          }));
+
+          // Fetch student names from students collection
+          const studentIds = [
+            ...new Set(exitData.map((record) => record.student_id)),
+          ];
+          const studentNames = {};
+
+          if (studentIds.length > 0) {
+            // First try to get names from students collection
+            const studentsRef = collection(db, 'students');
+            const studentsSnapshot = await getDocs(studentsRef);
+
+            studentsSnapshot.docs.forEach((doc) => {
+              const data = doc.data();
+              if (studentIds.includes(data.student_id)) {
+                studentNames[
+                  data.student_id
+                ] = `${data.first_name} ${data.last_name}`;
+              }
+            });
+
+            // For any missing names, try student_schedules collection as fallback
+            const missingIds = studentIds.filter(
+              (id) => !studentNames[id]
+            );
+            if (missingIds.length > 0) {
+              const scheduleSnapshot = await getDocs(
+                collection(db, 'student_schedules')
+              );
+              scheduleSnapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                if (missingIds.includes(data.student_id)) {
+                  studentNames[data.student_id] = data.name;
+                }
+              });
+            }
+          }
+
+          const updatedExitRecords = exitData.map((record) => ({
+            ...record,
+            studentName:
+              studentNames[record.student_id] || 'Unknown Student',
+          }));
+
+          setExitRecords(updatedExitRecords);
+        }
+      );
+    };
+
+    setupListener();
 
     const interval = setInterval(() => {
       setExitRecords((prev) =>
@@ -94,10 +137,12 @@ const StudentList = () => {
     }, 1000);
 
     return () => {
-      unsubscribeExitRecords();
+      if (unsubscribeExitRecords) {
+        unsubscribeExitRecords();
+      }
       clearInterval(interval);
     };
-  }, []);
+  }, [selectedClassId]); // Re-run effect when selectedClassId changes
 
   return (
     <Container
@@ -106,12 +151,21 @@ const StudentList = () => {
       <Box sx={{ textAlign: 'center', width: '100%' }}>
         <Typography variant="h4" gutterBottom>
           Students Currently Out
+          {selectedClassId && (
+            <Typography variant="subtitle1" color="text.secondary">
+              (From selected class)
+            </Typography>
+          )}
         </Typography>
         <Grid container spacing={3} justifyContent="center">
           {exitRecords.length === 0 ? (
-            <Typography variant="body1">
-              No students are currently out.
-            </Typography>
+            <Grid item xs={12}>
+              <Typography variant="body1" color="text.secondary">
+                {selectedClassId
+                  ? 'No students are currently out from this class.'
+                  : 'No students are currently out. Select a class to see students.'}
+              </Typography>
+            </Grid>
           ) : (
             exitRecords.map((record) => (
               <Grid item xs={12} sm={6} md={4} key={record.id}>
@@ -157,13 +211,21 @@ const StudentList = () => {
                       <strong>Time Gone:</strong>{' '}
                       {record.duration.time}
                     </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mt: 1 }}
+                    >
+                      <strong>Teacher:</strong>{' '}
+                      {record.teacher || 'Unknown'}
+                    </Typography>
                     <Button
                       variant="contained"
                       color="primary"
                       onClick={() => handleReturn(record.id)}
                       sx={{ mt: 2 }}
                     >
-                      Return
+                      Mark as Returned
                     </Button>
                   </CardContent>
                 </Card>

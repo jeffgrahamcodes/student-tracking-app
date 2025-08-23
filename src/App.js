@@ -115,6 +115,23 @@ const getNavItems = (role) =>
     },
   ].filter((item) => item.roles.includes(role));
 
+// Home component that manages shared state between StudentCheckIn and StudentList
+function HomeWithSharedState({ impersonateUser }) {
+  const [selectedClassId, setSelectedClassId] = useState('');
+
+  return (
+    <Box>
+      <StudentCheckIn
+        impersonateUser={impersonateUser}
+        onClassSelect={setSelectedClassId}
+      />
+      <Box sx={{ mt: 4 }}>
+        <StudentList selectedClassId={selectedClassId} />
+      </Box>
+    </Box>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [teacherName, setTeacherName] = useState('');
@@ -440,14 +457,9 @@ function App() {
                     <Route
                       path="/"
                       element={
-                        <Box>
-                          <StudentCheckIn
-                            impersonateUser={impersonateUser}
-                          />
-                          <Box sx={{ mt: 4 }}>
-                            <StudentList />
-                          </Box>
-                        </Box>
+                        <HomeWithSharedState
+                          impersonateUser={impersonateUser}
+                        />
                       }
                     />
                     <Route
