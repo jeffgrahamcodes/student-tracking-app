@@ -1,146 +1,48 @@
-# Hall-Waze: Student Hall Pass Tracker
+# Hall-Waze
 
-**Hall-Waze** is a web-based hall pass management system designed for schools to monitor student movement, enforce policies, and provide data insights — all while ensuring a seamless experience for teachers, admins, and superusers.
+A hall pass system for a real school. Teachers sign students out and back in from a phone or laptop, admins see who's out of class right now and where, and the rules a school actually enforces (like three passes a day) are built in instead of living on a clipboard.
 
----
+I built it as a teacher, for the building I teach in, which is why most of the features below came from someone asking "can it also...?"
 
-## Features
+## What it does
 
-### For Teachers
+**Teachers**
 
-- Secure login with role-based access
-- Filter students by current class period
-- Submit hall passes with student name, destination, and timestamp
-- Limit hall pass use to 3 per day per student
-- Timer on cards, with alert after 5 minutes
-- Prevent use during restricted time windows
-- Return button logs return time and removes student from active list
+- See only the students in their current class period
+- Issue a pass with destination and timestamp; the card shows a running timer and flags anyone out longer than 5 minutes
+- Hard limit of 3 passes per student per day, with the count shown before you issue one
+- One tap to log the return
 
-### For Admins
+**Admins**
 
-- Add and manage student records
-- Upload class schedules via Excel
-- Dashboard with student movement pie charts
-- Mark students who require an escort
-- Access and manage user roles
+- Add and edit students, flag students who require an escort, create classes, assign students to classes
+- Upload class schedules straight from the school's Excel export
+- Dashboard with a breakdown of student movement
 
-### For Superusers
+**Superusers**
 
-- Upload user role spreadsheet (admin, teacher, superuser)
-- Bulk-create Firebase Auth accounts for staff
-- Impersonate other users for troubleshooting
-- Access Firestore debugging page
+- Upload a staff roster spreadsheet and bulk-create accounts with roles (teacher, admin, superuser)
+- Impersonate any user to troubleshoot what they're seeing
+- A Firestore debugging page
 
----
+## Stack
 
-## Folder Overview
+- **Frontend:** React 19, React Router 7, Material UI 6, Recharts
+- **Backend:** Firebase Authentication and Cloud Firestore, with navigation and pages gated by role
+- **Data import:** SheetJS (`xlsx`) for schedule and roster uploads
+- **Hosting/CI:** Firebase Hosting, with GitHub Actions deploying a preview channel on every PR and production on merge
 
-```
-/src
-  ├── components/         → React components (CheckIn, List, Auth, etc.)
-  ├── firebase.js         → Firebase config
-  └── App.js              → Route layout and access control
-
-/public
-  └── index.html          → App entry point
-
-firebase.json             → Firebase Hosting config
-firestore.rules           → Firestore access control
-```
-
----
-
-## Tech Stack
-
-- **Firebase** (Auth, Firestore, Hosting)
-- **React.js** (Frontend)
-- **MUI** (Material UI for design)
-- **Chart.js** (Data visualization)
-- **XLSX.js** (Excel file handling)
-
----
-
-## Setup Guide
-
-### 1. Clone the Repo
-
-```bash
-git clone https://github.com/jeffgrahamcodes/student-tracking-app.git
-cd student-tracking-app
-```
-
-### 2. Install Dependencies
+## Run it
 
 ```bash
 npm install
-```
-
-### 3. Connect Firebase
-
-- Create a Firebase project
-- Enable **Authentication (Email/Password)** and **Firestore**
-- Replace credentials in `src/firebase.js`
-
-### 4. Run the App Locally
-
-```bash
 npm start
 ```
 
----
+You'll need your own Firebase project. Swap its web config into `src/firebase.js`, enable Email/Password auth, and create the Firestore database.
 
-## Deployment Guide
+## What I'd do next
 
-### Deploy to Firebase Hosting
-
-```bash
-npm run build
-firebase deploy
-```
-
-### Connect Custom Domain (e.g. hall-waze.com)
-
-- Go to **Firebase Hosting → Add Custom Domain**
-- Follow instructions to update A and TXT records
-- Remove any existing conflicting A records (e.g., from Squarespace)
-
----
-
-## Roles & Access
-
-| Role        | Permissions                                                          |
-| ----------- | -------------------------------------------------------------------- |
-| `teacher`   | Check in students, track exits/returns, enforce limits               |
-| `admin`     | Add students, view dashboard, upload schedule                        |
-| `superuser` | All access: upload user roles, bulk create users, impersonate, debug |
-
----
-
-## Future Features
-
-- Enforce restroom pass windows by grade & period
-- Improve mobile UI for tablets/phones
-- Alerts when student exceeds hall pass duration
-- Downloadable reports and audit history
-- Automated syncing with SIS data
-
----
-
-## Why Hall-Waze?
-
-Designed in collaboration with educators to promote:
-
-- Transparency
-- Accountability
-- Student safety
-- Better data-informed decisions
-
----
-
-## Created By
-
-**Jeff Graham**
-Full-Stack Cloud Developer & Educator
-[LinkedIn](https://linkedin.com/in/jeffgrahamcodes)
-[GitHub](https://github.com/jeffgrahamcodes)
-[jeffgraham.codes](https://jeffgraham.codes)
+- Move bulk account creation into a Cloud Function so no admin credentials ever touch the browser
+- Lock down Firestore security rules per role to match the UI restrictions
+- Tests around the pass rules, since those are the part a school depends on
